@@ -48,8 +48,10 @@ class Project(object):
                 idx = (max(self._data['tasks'].keys()) +
                        1) if bool(self._data['tasks']) else 0
             deadline = text_deadline.get('1.0', tkinter.END).strip()
+            step_to_be = self._data['steps'][i_step] if i_step < len(
+                self._data['steps']) else KEY_HIDDEN
             self._data['tasks'][idx] = {
-                'step': self.get_steps()[i_step],
+                'step': deadline,
                 'title': title,
                 'text': text_description.get('1.0', tkinter.END).strip(),
                 'deadline': deadline,
@@ -109,6 +111,14 @@ class Project(object):
                 tkinter.Button(
                     dialog,
                     text=steps[i_step + 1],
+                    height=self._height,
+                    width=self._width,
+                    command=lambda i=(i_step + 1): edit(idx, i)).pack(
+                        side=tkinter.TOP)
+            if i_step + 1 == len(steps):
+                tkinter.Button(
+                    dialog,
+                    text=KEY_HIDDEN,
                     height=self._height,
                     width=self._width,
                     command=lambda i=(i_step + 1): edit(idx, i)).pack(
