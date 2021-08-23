@@ -24,7 +24,6 @@ class Project(object):
             int(k): v
             for k, v in self._data['tasks'].items()
         }
-        print(self._data)
         self._check()
         self._height = 3
         self._width = 40
@@ -43,7 +42,6 @@ class Project(object):
         def edit(idx: int, i_step: int) -> None:
             title = text_title.get('1.0', tkinter.END).strip()
             assert '\n' not in title, 'title cannot contain newline'
-            print(idx, self._data['tasks'])
             if idx < 0:
                 idx = (max(self._data['tasks'].keys()) +
                        1) if bool(self._data['tasks']) else 0
@@ -279,13 +277,13 @@ def init_project() -> None:
     main.title(NAME + ' create')
 
     text_name = tkinter.Text(main, height=height, width=width)
-    text_name.insert(tkinter.END, 'name of the new project')
+    text_name.insert(tkinter.END, 'name_of_the_new_project')
     text_name.pack(side=tkinter.TOP)
 
     text_steps = tkinter.Text(main, height=height * 5, width=width)
     text_steps.insert(
         tkinter.END, '\n'.join(
-            ('to start', 'in progress', 'in verification', 'finished')))
+            ('to_start', 'in_progress', 'in_verification', 'finished')))
     text_steps.pack(side=tkinter.TOP)
 
     tkinter.Button(main,
