@@ -129,6 +129,17 @@ class Project(object):
         with open(self._path, 'w') as fs:
             fs.write(text_config)
 
+    def delete(self) -> None:
+        main = tkinter.Tk()
+        main.title(NAME + ' ' + self._name)
+        tkinter.Button(
+            main,
+            text='delete project',
+            height=self._height,
+            width=self._width,
+            command=lambda: [os.remove(self._path),
+                             main.destroy()]).pack(side=tkinter.LEFT)
+
     def update_vis(self) -> None:
         main = tkinter.Tk()
         main.title(NAME + ' ' + self._name)
@@ -148,6 +159,13 @@ class Project(object):
                        height=self._height,
                        width=self._width,
                        command=self.save).pack(side=tkinter.LEFT)
+        tkinter.Button(
+            frame_util,
+            text='delete',
+            height=self._height,
+            width=self._width,
+            command=lambda: [main.destroy(), self.delete()]).pack(
+                side=tkinter.LEFT)
 
         steps = tuple(step for step in self.get_steps() if step != KEY_HIDDEN)
         for col, step in enumerate(steps):
