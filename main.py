@@ -51,7 +51,7 @@ class Project(object):
             step_to_be = self._data['steps'][i_step] if i_step < len(
                 self._data['steps']) else KEY_HIDDEN
             self._data['tasks'][idx] = {
-                'step': deadline,
+                'step': step_to_be,
                 'title': title,
                 'text': text_description.get('1.0', tkinter.END).strip(),
                 'deadline': deadline,
@@ -92,37 +92,45 @@ class Project(object):
                 command=lambda i=0: edit(idx, i)).pack(side=tkinter.TOP)
         else:
             steps = self._data['steps']
-            i_step = steps.index(task['step'])
             tkinter.Button(
                 dialog,
                 text='update',
                 height=self._height,
                 width=self._width,
                 command=lambda i=0: edit(idx, i)).pack(side=tkinter.TOP)
-            if i_step > 0:
+            if task['step'] != KEY_HIDDEN:
+                i_step = steps.index(task['step'])
+                if i_step > 0:
+                    tkinter.Button(
+                        dialog,
+                        text=steps[i_step - 1],
+                        height=self._height,
+                        width=self._width,
+                        command=lambda i=(i_step - 1): edit(idx, i)).pack(
+                            side=tkinter.TOP)
+                if i_step + 1 < len(steps):
+                    tkinter.Button(
+                        dialog,
+                        text=steps[i_step + 1],
+                        height=self._height,
+                        width=self._width,
+                        command=lambda i=(i_step + 1): edit(idx, i)).pack(
+                            side=tkinter.TOP)
+                if i_step + 1 == len(steps):
+                    tkinter.Button(
+                        dialog,
+                        text=KEY_HIDDEN,
+                        height=self._height,
+                        width=self._width,
+                        command=lambda i=(i_step + 1): edit(idx, i)).pack(
+                            side=tkinter.TOP)
+            else:
                 tkinter.Button(
                     dialog,
-                    text=steps[i_step - 1],
+                    text=f'back to {steps[0]}',
                     height=self._height,
                     width=self._width,
-                    command=lambda i=(i_step - 1): edit(idx, i)).pack(
-                        side=tkinter.TOP)
-            if i_step + 1 < len(steps):
-                tkinter.Button(
-                    dialog,
-                    text=steps[i_step + 1],
-                    height=self._height,
-                    width=self._width,
-                    command=lambda i=(i_step + 1): edit(idx, i)).pack(
-                        side=tkinter.TOP)
-            if i_step + 1 == len(steps):
-                tkinter.Button(
-                    dialog,
-                    text=KEY_HIDDEN,
-                    height=self._height,
-                    width=self._width,
-                    command=lambda i=(i_step + 1): edit(idx, i)).pack(
-                        side=tkinter.TOP)
+                    command=lambda i=0: edit(idx, i)).pack(side=tkinter.TOP)
 
     def save(self) -> None:
         text_config = json.dumps(self._data, indent=' ')
@@ -139,6 +147,27 @@ class Project(object):
             width=self._width,
             command=lambda: [os.remove(self._path),
                              main.destroy()]).pack(side=tkinter.LEFT)
+
+    def disp_hidden(self) -> None:
+        main = tkinter.Tk()
+        main.title(NAME + ' ' + self._name + ' hidden')
+
+        tkinter.Button(
+            main,
+            text='back',
+            height=self._height,
+            width=self._width,
+            command=lambda: [main.destroy(), self.update_vis()]).pack(
+                side=tkinter.TOP)
+
+        for idx, task in self.get_tasks_in_step(KEY_HIDDEN).items():
+            tkinter.Button(
+                main,
+                text=(task['title'] + '\n' + task['deadline']),
+                height=self._height,
+                width=self._width,
+                command=lambda i=idx: [main.destroy(
+                ), self.edit_task(i)]).pack(side=tkinter.TOP)
 
     def update_vis(self) -> None:
         main = tkinter.Tk()
@@ -166,6 +195,12 @@ class Project(object):
             width=self._width,
             command=lambda: [main.destroy(), self.delete()]).pack(
                 side=tkinter.LEFT)
+        tkinter.Button(frame_util,
+                       text='hidden',
+                       height=self._height,
+                       width=self._width,
+                       command=lambda: [main.destroy(
+                       ), self.disp_hidden()]).pack(side=tkinter.LEFT)
 
         steps = tuple(step for step in self.get_steps() if step != KEY_HIDDEN)
         for col, step in enumerate(steps):
