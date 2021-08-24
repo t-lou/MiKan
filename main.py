@@ -46,8 +46,9 @@ class Project(object):
                 idx = (max(self._data['tasks'].keys()) +
                        1) if bool(self._data['tasks']) else 0
             deadline = text_deadline.get('1.0', tkinter.END).strip()
-            step_to_be = self._data['steps'][i_step] if i_step < len(
-                self._data['steps']) else KEY_HIDDEN
+            step_to_be = (self._data['steps'] + [
+                KEY_HIDDEN,
+            ])[i_step]
             self._data['tasks'][idx] = {
                 'step': step_to_be,
                 'title': title,
@@ -90,14 +91,14 @@ class Project(object):
                 command=lambda i=0: edit(idx, i)).pack(side=tkinter.TOP)
         else:
             steps = self._data['steps']
-            tkinter.Button(
-                dialog,
-                text='update',
-                height=self._height,
-                width=self._width,
-                command=lambda i=0: edit(idx, i)).pack(side=tkinter.TOP)
             if task['step'] != KEY_HIDDEN:
                 i_step = steps.index(task['step'])
+                tkinter.Button(dialog,
+                               text='update',
+                               height=self._height,
+                               width=self._width,
+                               command=lambda i=i_step: edit(idx, i)).pack(
+                                   side=tkinter.TOP)
                 if i_step > 0:
                     tkinter.Button(
                         dialog,
@@ -106,18 +107,12 @@ class Project(object):
                         width=self._width,
                         command=lambda i=(i_step - 1): edit(idx, i)).pack(
                             side=tkinter.TOP)
-                if i_step + 1 < len(steps):
+                if i_step + 1 <= len(steps):
                     tkinter.Button(
                         dialog,
-                        text=steps[i_step + 1],
-                        height=self._height,
-                        width=self._width,
-                        command=lambda i=(i_step + 1): edit(idx, i)).pack(
-                            side=tkinter.TOP)
-                if i_step + 1 == len(steps):
-                    tkinter.Button(
-                        dialog,
-                        text=KEY_HIDDEN,
+                        text=(steps + [
+                            KEY_HIDDEN,
+                        ])[i_step + 1],
                         height=self._height,
                         width=self._width,
                         command=lambda i=(i_step + 1): edit(idx, i)).pack(
