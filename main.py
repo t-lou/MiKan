@@ -13,9 +13,9 @@ PATH_ROOT = os.path.dirname(os.path.realpath(__file__))
 PATH_PROJ = os.path.join(PATH_ROOT, '.proj')
 # Key for the tasks not to show.
 KEY_HIDDEN = 'hidden'
-
+# Allowed levels for tasks
 LEVELS = {'critical', 'high', 'normal'}
-
+# Whether a weekday is working day [?, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday]
 WORKING_DAYS = (None, True, True, True, True, True, False, False)
 
 
