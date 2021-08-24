@@ -14,6 +14,8 @@ PATH_PROJ = os.path.join(PATH_ROOT, '.proj')
 # Key for the tasks not to show.
 KEY_HIDDEN = 'hidden'
 
+LEVELS = {'critical', 'high', 'normal'}
+
 
 def parse_date(string: str) -> datetime.datetime:
     ret = None
@@ -35,6 +37,23 @@ def format_date(date: datetime.datetime) -> str:
 
 def distance_date(start: datetime.datetime, end: datetime.datetime) -> int:
     return -1 if start >= end else (end - start).days
+
+
+def encode_color(task: dict, today: datetime.datetime) -> str:
+    rule = {
+        'critical': 'red',
+        'high': 'yellow',
+    }
+    if 'level' in task and task['level'] in rule:
+        return rule[task['level']]
+    else:
+        interval = distance_date(today, parse_date(task['deadline']))
+        print(interval)
+        if interval < 3:
+            return 'red'
+        elif interval < 7:
+            return 'yellow'
+    return None
 
 
 class Project(object):
@@ -70,7 +89,8 @@ class Project(object):
                        1) if bool(self._data['tasks']) else 0
             deadline = text_deadline.get('1.0', tkinter.END).strip()
             deadline = parse_date(deadline)
-            if parse_date(deadline) is not None:
+            level = text_level.get('1.0', tkinter.END).strip()
+            if parse_date(deadline) is not None and level in LEVELS:
                 step_to_be = (self._data['steps'] + [
                     KEY_HIDDEN,
                 ])[i_step]
@@ -78,6 +98,7 @@ class Project(object):
                     'step': step_to_be,
                     'title': title,
                     'text': text_description.get('1.0', tkinter.END).strip(),
+                    'level': level,
                     'deadline': deadline,
                 }
                 dialog.destroy()
@@ -99,6 +120,11 @@ class Project(object):
         text_description.insert(
             tkinter.END, 'description' if task is None else task['text'])
         text_description.pack(side=tkinter.TOP)
+
+        text_level = tkinter.Text(dialog, height=3, width=self._width)
+        text_level.insert(tkinter.END,
+                          'normal' if task is None else task['level'])
+        text_level.pack(side=tkinter.TOP)
 
         text_deadline = tkinter.Text(dialog,
                                      height=self._height,
@@ -223,6 +249,7 @@ class Project(object):
                        ), self.disp_hidden()]).pack(side=tkinter.LEFT)
 
         steps = tuple(step for step in self.get_steps() if step != KEY_HIDDEN)
+        today = parse_date(format_date(datetime.datetime.now()))
         for col, step in enumerate(steps):
             tkinter.Label(frame_cols,
                           height=self._height,
@@ -235,6 +262,7 @@ class Project(object):
                     text=(task['title'] + '\n' + task['deadline']),
                     height=self._height,
                     width=self._width,
+                    bg=encode_color(task=task, today=today),
                     command=lambda i=idx: [main.destroy(),
                                            self.edit_task(i)]).grid(row=row,
                                                                     column=col)
@@ -261,6 +289,8 @@ class Project(object):
             'tasks have invalid text'
         assert all('deadline' in task and parse_date(task['deadline']) is not None for _, task in self._data['tasks'].items()),\
             'tasks have invalid deadline'
+        assert all('level' in task and task['level'] in LEVELS for _, task in self._data['tasks'].items()),\
+            'tasks have invalid level'
 
 
 def start_project(name: str) -> None:
