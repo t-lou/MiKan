@@ -16,27 +16,32 @@ KEY_HIDDEN = 'hidden'
 
 LEVELS = {'critical', 'high', 'normal'}
 
+WORKING_DAYS = (None, True, True, True, True, True, False, False)
+
 
 def parse_date(string: str) -> datetime.datetime:
-    ret = None
     try:
-        ret = datetime.datetime.strptime(string, '%Y-%m-%d')
+        return datetime.datetime.strptime(string, '%Y-%m-%d')
     except:
-        pass
-    return ret
+        return None
 
 
 def format_date(date: datetime.datetime) -> str:
-    ret = None
     try:
-        ret = date.strftime('%Y-%m-%d')
+        return date.strftime('%Y-%m-%d')
     except:
-        pass
-    return ret
+        return None
 
 
 def distance_date(start: datetime.datetime, end: datetime.datetime) -> int:
-    return -1 if start >= end else (end - start).days
+    if start > end:
+        return -1
+    interval = datetime.timedelta(days=1)
+    i = 0
+    while start < end:
+        start += interval
+        i += (1 if WORKING_DAYS[start.isocalendar()[2]] else 0)
+    return i
 
 
 def encode_color(task: dict, today: datetime.datetime) -> str:
@@ -48,7 +53,6 @@ def encode_color(task: dict, today: datetime.datetime) -> str:
         return rule[task['level']]
     else:
         interval = distance_date(today, parse_date(task['deadline']))
-        print(interval)
         if interval < 3:
             return 'red'
         elif interval < 7:
@@ -88,7 +92,6 @@ class Project(object):
                 idx = (max(self._data['tasks'].keys()) +
                        1) if bool(self._data['tasks']) else 0
             deadline = text_deadline.get('1.0', tkinter.END).strip()
-            deadline = parse_date(deadline)
             level = text_level.get('1.0', tkinter.END).strip()
             if parse_date(deadline) is not None and level in LEVELS:
                 step_to_be = (self._data['steps'] + [
@@ -215,6 +218,23 @@ class Project(object):
                 command=lambda i=idx: [main.destroy(
                 ), self.edit_task(i)]).pack(side=tkinter.TOP)
 
+    def disp_raw(self) -> None:
+        main = tkinter.Tk()
+        main.title(NAME + ' ' + self._name + ' raw')
+
+        text_raw = tkinter.Text(main, height=20, width=120)
+        with open(self._path, 'r') as fs:
+            text_raw.insert(tkinter.END, fs.read())
+        text_raw.pack(side=tkinter.TOP, expand=tkinter.YES, fill=tkinter.BOTH)
+
+    def disp_tmp(self) -> None:
+        main = tkinter.Tk()
+        main.title(NAME + ' ' + self._name + ' tmp')
+
+        text_raw = tkinter.Text(main, height=20, width=120)
+        text_raw.insert(tkinter.END, json.dumps(self._data, indent=' '))
+        text_raw.pack(side=tkinter.TOP, expand=tkinter.YES, fill=tkinter.BOTH)
+
     def update_vis(self) -> None:
         main = tkinter.Tk()
         main.title(NAME + ' ' + self._name)
@@ -228,25 +248,43 @@ class Project(object):
             height=self._height,
             width=self._width,
             command=lambda: [main.destroy(), self.edit_task()]).pack(
-                side=tkinter.LEFT)
+                side=tkinter.LEFT, expand=tkinter.YES, fill=tkinter.BOTH)
         tkinter.Button(frame_util,
                        text='save',
                        height=self._height,
                        width=self._width,
-                       command=self.save).pack(side=tkinter.LEFT)
+                       command=self.save).pack(side=tkinter.LEFT,
+                                               expand=tkinter.YES,
+                                               fill=tkinter.BOTH)
         tkinter.Button(
             frame_util,
             text='delete',
             height=self._height,
             width=self._width,
             command=lambda: [main.destroy(), self.delete()]).pack(
-                side=tkinter.LEFT)
+                side=tkinter.LEFT, expand=tkinter.YES, fill=tkinter.BOTH)
         tkinter.Button(frame_util,
                        text='hidden',
                        height=self._height,
                        width=self._width,
                        command=lambda: [main.destroy(
-                       ), self.disp_hidden()]).pack(side=tkinter.LEFT)
+                       ), self.disp_hidden()]).pack(side=tkinter.LEFT,
+                                                    expand=tkinter.YES,
+                                                    fill=tkinter.BOTH)
+        tkinter.Button(frame_util,
+                       text='raw',
+                       height=self._height,
+                       width=self._width,
+                       command=self.disp_raw).pack(side=tkinter.LEFT,
+                                                   expand=tkinter.YES,
+                                                   fill=tkinter.BOTH)
+        tkinter.Button(frame_util,
+                       text='tmp',
+                       height=self._height,
+                       width=self._width,
+                       command=self.disp_tmp).pack(side=tkinter.LEFT,
+                                                   expand=tkinter.YES,
+                                                   fill=tkinter.BOTH)
 
         steps = tuple(step for step in self.get_steps() if step != KEY_HIDDEN)
         today = parse_date(format_date(datetime.datetime.now()))
