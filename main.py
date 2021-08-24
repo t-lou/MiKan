@@ -1,6 +1,7 @@
 import tkinter
 import os
 import json
+import datetime
 
 # Name of the program.
 NAME = 'MiKan'
@@ -12,6 +13,28 @@ PATH_ROOT = os.path.dirname(os.path.realpath(__file__))
 PATH_PROJ = os.path.join(PATH_ROOT, '.proj')
 # Key for the tasks not to show.
 KEY_HIDDEN = 'hidden'
+
+
+def parse_date(string: str) -> datetime.datetime:
+    ret = None
+    try:
+        ret = datetime.datetime.strptime(string, '%Y-%m-%d')
+    except:
+        pass
+    return ret
+
+
+def format_date(date: datetime.datetime) -> str:
+    ret = None
+    try:
+        ret = date.strftime('%Y-%m-%d')
+    except:
+        pass
+    return ret
+
+
+def distance_date(start: datetime.datetime, end: datetime.datetime) -> int:
+    return -1 if start >= end else (end - start).days
 
 
 class Project(object):
@@ -46,17 +69,19 @@ class Project(object):
                 idx = (max(self._data['tasks'].keys()) +
                        1) if bool(self._data['tasks']) else 0
             deadline = text_deadline.get('1.0', tkinter.END).strip()
-            step_to_be = (self._data['steps'] + [
-                KEY_HIDDEN,
-            ])[i_step]
-            self._data['tasks'][idx] = {
-                'step': step_to_be,
-                'title': title,
-                'text': text_description.get('1.0', tkinter.END).strip(),
-                'deadline': deadline,
-            }
-            dialog.destroy()
-            self.update_vis()
+            deadline = parse_date(deadline)
+            if parse_date(deadline) is not None:
+                step_to_be = (self._data['steps'] + [
+                    KEY_HIDDEN,
+                ])[i_step]
+                self._data['tasks'][idx] = {
+                    'step': step_to_be,
+                    'title': title,
+                    'text': text_description.get('1.0', tkinter.END).strip(),
+                    'deadline': deadline,
+                }
+                dialog.destroy()
+                self.update_vis()
 
         task = None if idx < 0 else self._data['tasks'][idx]
 
@@ -78,8 +103,10 @@ class Project(object):
         text_deadline = tkinter.Text(dialog,
                                      height=self._height,
                                      width=self._width)
-        text_deadline.insert(tkinter.END,
-                             'deadline' if task is None else task['deadline'])
+        text_deadline.insert(
+            tkinter.END,
+            format_date(datetime.datetime.now())
+            if task is None else task['deadline'])
         text_deadline.pack(side=tkinter.TOP)
 
         if idx < 0:
@@ -232,8 +259,7 @@ class Project(object):
             'tasks have invalid title'
         assert all('text' in task and bool(task['text']) for _, task in self._data['tasks'].items()),\
             'tasks have invalid text'
-        # TODO add deadline format etc
-        assert all('deadline' in task and bool(task['deadline']) for _, task in self._data['tasks'].items()),\
+        assert all('deadline' in task and parse_date(task['deadline']) is not None for _, task in self._data['tasks'].items()),\
             'tasks have invalid deadline'
 
 
