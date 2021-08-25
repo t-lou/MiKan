@@ -111,6 +111,9 @@ class Project(object):
 
         dialog = tkinter.Tk()
         dialog.title(NAME + ' ' + self._name + ' new')
+        dialog.protocol(
+            'WM_DELETE_WINDOW',
+            lambda: [self.close_check(), dialog.destroy()])
 
         text_title = tkinter.Text(dialog,
                                   height=self._height,
@@ -261,7 +264,7 @@ class Project(object):
         main = tkinter.Tk()
         main.title(NAME + ' ' + self._name)
         main.protocol(
-            "WM_DELETE_WINDOW",
+            'WM_DELETE_WINDOW',
             lambda: [self.close_check(), main.destroy()])
 
         steps = self.get_steps()
