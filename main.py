@@ -239,9 +239,33 @@ class Project(object):
         text_raw.insert(tkinter.END, json.dumps(self._data, indent=' '))
         text_raw.pack(side=tkinter.TOP, expand=tkinter.YES, fill=tkinter.BOTH)
 
+    def close_check(self) -> None:
+        data_curr = json.dumps(self._data, indent=' ')
+        with open(self._path, 'r') as fs:
+            data_saved = fs.read()
+        if data_curr != data_saved:
+            warning = tkinter.Tk()
+            warning.title('warning')
+            tkinter.Button(
+                warning,
+                text='save',
+                height=self._height,
+                width=self._width,
+                command=lambda: [self.save(), warning.destroy()]).pack(
+                    side=tkinter.TOP)
+            tkinter.Button(warning,
+                           text='discard',
+                           height=self._height,
+                           width=self._width,
+                           command=warning.destroy).pack(side=tkinter.TOP)
+
     def update_vis(self) -> None:
         main = tkinter.Tk()
         main.title(NAME + ' ' + self._name)
+        main.protocol(
+            "WM_DELETE_WINDOW",
+            lambda: [self.close_check(), main.destroy()])
+
         frames = []
         frame_cols = tkinter.Frame(main)
         frame_util = tkinter.Frame(main)
