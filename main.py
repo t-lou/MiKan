@@ -150,7 +150,7 @@ class Project(object):
             if task['step'] != KEY_HIDDEN:
                 i_step = steps.index(task['step'])
                 tkinter.Button(dialog,
-                               text='update',
+                               text='||| update |||',
                                height=self._height,
                                width=self._width,
                                command=lambda i=i_step: edit(idx, i)).pack(
@@ -158,7 +158,7 @@ class Project(object):
                 if i_step > 0:
                     tkinter.Button(
                         dialog,
-                        text=steps[i_step - 1],
+                        text=f'<<< {steps[i_step - 1]} <<<',
                         height=self._height,
                         width=self._width,
                         command=lambda i=(i_step - 1): edit(idx, i)).pack(
@@ -166,9 +166,7 @@ class Project(object):
                 if i_step + 1 <= len(steps):
                     tkinter.Button(
                         dialog,
-                        text=(steps + [
-                            KEY_HIDDEN,
-                        ])[i_step + 1],
+                        text=f'>>> {(steps + [KEY_HIDDEN])[i_step + 1]} >>>',
                         height=self._height,
                         width=self._width,
                         command=lambda i=(i_step + 1): edit(idx, i)).pack(
