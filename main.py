@@ -53,9 +53,9 @@ def encode_color(task: dict, today: datetime.datetime) -> str:
         return rule[task['level']]
     else:
         interval = distance_date(today, parse_date(task['deadline']))
-        if interval < 3:
+        if interval <= 1:
             return 'red'
-        elif interval < 7:
+        elif interval <= 3:
             return 'yellow'
     return None
 
