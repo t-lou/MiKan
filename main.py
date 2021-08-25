@@ -107,6 +107,13 @@ class Project(object):
                 dialog.destroy()
                 self.update_vis()
 
+        def pack_button(text: str, callback) -> None:
+            tkinter.Button(dialog,
+                           text=text,
+                           height=self._height,
+                           width=self._width,
+                           command=callback).pack(side=tkinter.TOP)
+
         task = None if idx < 0 else self._data['tasks'][idx]
 
         dialog = tkinter.Tk()
@@ -142,45 +149,21 @@ class Project(object):
         text_deadline.pack(side=tkinter.TOP)
 
         if idx < 0:
-            tkinter.Button(
-                dialog,
-                text='add',
-                height=self._height,
-                width=self._width,
-                command=lambda i=0: edit(idx, i)).pack(side=tkinter.TOP)
+            pack_button('add', lambda i=0: edit(idx, i))
         else:
             steps = self._data['steps']
             if task['step'] != KEY_HIDDEN:
                 i_step = steps.index(task['step'])
-                tkinter.Button(dialog,
-                               text='||| update |||',
-                               height=self._height,
-                               width=self._width,
-                               command=lambda i=i_step: edit(idx, i)).pack(
-                                   side=tkinter.TOP)
+                pack_button('||| update |||', lambda i=i_step: edit(idx, i))
                 if i_step > 0:
-                    tkinter.Button(
-                        dialog,
-                        text=f'<<< {steps[i_step - 1]} <<<',
-                        height=self._height,
-                        width=self._width,
-                        command=lambda i=(i_step - 1): edit(idx, i)).pack(
-                            side=tkinter.TOP)
+                    pack_button(f'<<< {steps[i_step - 1]} <<<',
+                                lambda i=(i_step - 1): edit(idx, i))
                 if i_step + 1 <= len(steps):
-                    tkinter.Button(
-                        dialog,
-                        text=f'>>> {(steps + [KEY_HIDDEN])[i_step + 1]} >>>',
-                        height=self._height,
-                        width=self._width,
-                        command=lambda i=(i_step + 1): edit(idx, i)).pack(
-                            side=tkinter.TOP)
+                    pack_button(
+                        f'>>> {(steps + [KEY_HIDDEN])[i_step + 1]} >>>',
+                        lambda i=(i_step + 1): edit(idx, i))
             else:
-                tkinter.Button(
-                    dialog,
-                    text=f'back to {steps[0]}',
-                    height=self._height,
-                    width=self._width,
-                    command=lambda i=0: edit(idx, i)).pack(side=tkinter.TOP)
+                pack_button(f'back to {steps[0]}', lambda i=0: edit(idx, i))
 
     def save(self, path: str = None) -> None:
         text_config = json.dumps(self._data, indent=' ')
