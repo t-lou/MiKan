@@ -273,48 +273,23 @@ class Project(object):
         frame_cols = tkinter.Frame(main)
         frame_util = tkinter.Frame(main)
 
-        width_util = self._width * len(steps) // 7
-
-        tkinter.Button(
-            frame_util,
-            text='new',
-            height=self._height,
-            width=width_util,
-            command=lambda: [main.destroy(), self.edit_task()]).pack(
-                side=tkinter.LEFT)
-        tkinter.Button(frame_util,
-                       text='save',
-                       height=self._height,
-                       width=width_util,
-                       command=self.save).pack(side=tkinter.LEFT)
-        tkinter.Button(frame_util,
-                       text='backup',
-                       height=self._height,
-                       width=width_util,
-                       command=self.backup).pack(side=tkinter.LEFT)
-        tkinter.Button(
-            frame_util,
-            text='delete',
-            height=self._height,
-            width=width_util,
-            command=lambda: [main.destroy(), self.delete()]).pack(
-                side=tkinter.LEFT)
-        tkinter.Button(frame_util,
-                       text='hidden',
-                       height=self._height,
-                       width=width_util,
-                       command=lambda: [main.destroy(
-                       ), self.disp_hidden()]).pack(side=tkinter.LEFT)
-        tkinter.Button(frame_util,
-                       text='raw',
-                       height=self._height,
-                       width=width_util,
-                       command=self.disp_raw).pack(side=tkinter.LEFT)
-        tkinter.Button(frame_util,
-                       text='tmp',
-                       height=self._height,
-                       width=width_util,
-                       command=self.disp_tmp).pack(side=tkinter.LEFT)
+        utils = {
+            'new': lambda: [main.destroy(), self.edit_task()],
+            'save': self.save,
+            'backup': self.backup,
+            'delete': lambda: [main.destroy(), self.delete()],
+            'hidden':
+            lambda: [main.destroy(), self.disp_hidden()],
+            'raw': self.disp_raw,
+            'tmp': self.disp_tmp,
+        }
+        width_util = self._width * len(steps) // len(utils)
+        for text, callback in utils.items():
+            tkinter.Button(frame_util,
+                           text=text,
+                           height=self._height,
+                           width=width_util,
+                           command=callback).pack(side=tkinter.LEFT)
 
         today = parse_date(format_date(datetime.datetime.now()))
         for col, step in enumerate(steps):
