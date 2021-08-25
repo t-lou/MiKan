@@ -266,62 +266,55 @@ class Project(object):
             "WM_DELETE_WINDOW",
             lambda: [self.close_check(), main.destroy()])
 
+        steps = self.get_steps()
+
         frames = []
         frame_cols = tkinter.Frame(main)
         frame_util = tkinter.Frame(main)
+
+        width_util = self._width * len(steps) // 7
 
         tkinter.Button(
             frame_util,
             text='new',
             height=self._height,
-            width=self._width,
+            width=width_util,
             command=lambda: [main.destroy(), self.edit_task()]).pack(
-                side=tkinter.LEFT, expand=tkinter.YES, fill=tkinter.BOTH)
+                side=tkinter.LEFT)
         tkinter.Button(frame_util,
                        text='save',
                        height=self._height,
-                       width=self._width,
-                       command=self.save).pack(side=tkinter.LEFT,
-                                               expand=tkinter.YES,
-                                               fill=tkinter.BOTH)
+                       width=width_util,
+                       command=self.save).pack(side=tkinter.LEFT)
         tkinter.Button(frame_util,
                        text='backup',
                        height=self._height,
-                       width=self._width,
-                       command=self.backup).pack(side=tkinter.LEFT,
-                                                 expand=tkinter.YES,
-                                                 fill=tkinter.BOTH)
+                       width=width_util,
+                       command=self.backup).pack(side=tkinter.LEFT)
         tkinter.Button(
             frame_util,
             text='delete',
             height=self._height,
-            width=self._width,
+            width=width_util,
             command=lambda: [main.destroy(), self.delete()]).pack(
-                side=tkinter.LEFT, expand=tkinter.YES, fill=tkinter.BOTH)
+                side=tkinter.LEFT)
         tkinter.Button(frame_util,
                        text='hidden',
                        height=self._height,
-                       width=self._width,
+                       width=width_util,
                        command=lambda: [main.destroy(
-                       ), self.disp_hidden()]).pack(side=tkinter.LEFT,
-                                                    expand=tkinter.YES,
-                                                    fill=tkinter.BOTH)
+                       ), self.disp_hidden()]).pack(side=tkinter.LEFT)
         tkinter.Button(frame_util,
                        text='raw',
                        height=self._height,
-                       width=self._width,
-                       command=self.disp_raw).pack(side=tkinter.LEFT,
-                                                   expand=tkinter.YES,
-                                                   fill=tkinter.BOTH)
+                       width=width_util,
+                       command=self.disp_raw).pack(side=tkinter.LEFT)
         tkinter.Button(frame_util,
                        text='tmp',
                        height=self._height,
-                       width=self._width,
-                       command=self.disp_tmp).pack(side=tkinter.LEFT,
-                                                   expand=tkinter.YES,
-                                                   fill=tkinter.BOTH)
+                       width=width_util,
+                       command=self.disp_tmp).pack(side=tkinter.LEFT)
 
-        steps = tuple(step for step in self.get_steps() if step != KEY_HIDDEN)
         today = parse_date(format_date(datetime.datetime.now()))
         for col, step in enumerate(steps):
             tkinter.Label(frame_cols,
@@ -380,7 +373,8 @@ def init_project() -> None:
         assert not os.path.isfile(filename), 'name exists'
         steps = tuple(it.strip()
                       for it in text_steps.get('1.0', tkinter.END).split('\n'))
-        steps = tuple(step for step in steps if bool(step))
+        steps = tuple(step for step in steps
+                      if bool(step) and step != KEY_HIDDEN)
 
         text_config = json.dumps({
             'name': name,
