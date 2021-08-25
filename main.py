@@ -181,10 +181,14 @@ class Project(object):
                     width=self._width,
                     command=lambda i=0: edit(idx, i)).pack(side=tkinter.TOP)
 
-    def save(self) -> None:
+    def save(self, path: str = None) -> None:
         text_config = json.dumps(self._data, indent=' ')
-        with open(self._path, 'w') as fs:
+        with open(self._path if path is None else path, 'w') as fs:
             fs.write(text_config)
+
+    def backup(self) -> None:
+        self.save(self._path + '.' +
+                  datetime.datetime.now().strftime('%Y%m%d%H%M%S') + '.back')
 
     def delete(self) -> None:
         main = tkinter.Tk()
@@ -256,6 +260,13 @@ class Project(object):
                        command=self.save).pack(side=tkinter.LEFT,
                                                expand=tkinter.YES,
                                                fill=tkinter.BOTH)
+        tkinter.Button(frame_util,
+                       text='backup',
+                       height=self._height,
+                       width=self._width,
+                       command=self.backup).pack(side=tkinter.LEFT,
+                                                 expand=tkinter.YES,
+                                                 fill=tkinter.BOTH)
         tkinter.Button(
             frame_util,
             text='delete',
