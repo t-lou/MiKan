@@ -45,22 +45,24 @@ def distance_date(start: datetime.datetime, end: datetime.datetime) -> int:
     return i
 
 
-def encode_color(task: dict, today: datetime.datetime) -> str:
+def encode_color(task: dict, today: datetime.datetime) -> tuple:
     rule = {
         'critical': '#B22222',
         'high': '#FFA500',
         'normal': '#FDF5E6',
         'low': '#9ACD32',
     }
-    if 'level' in task and task['level'] in rule:
-        return rule[task['level']]
+    background = rule[task['level']]
+
+    interval = distance_date(today, parse_date(task['deadline']))
+    if interval <= 1:
+        border = '#B22222'
+    elif interval <= 3:
+        border = '#FFA500'
     else:
-        interval = distance_date(today, parse_date(task['deadline']))
-        if interval <= 1:
-            return 'red'
-        elif interval <= 3:
-            return 'yellow'
-    return None
+        border = background
+
+    return background, border
 
 
 class Project(object):
@@ -286,15 +288,18 @@ class Project(object):
                           text=step).grid(row=0, rowspan=1, column=col)
             row = 1
             for idx, task in self.get_tasks_in_step(step).items():
+                background, border = encode_color(task=task, today=today)
+                border = tkinter.Frame(frame_cols, background=border)
                 tkinter.Button(
-                    frame_cols,
+                    border,
                     text=(task['title'] + '\n' + task['deadline']),
                     height=self._height,
                     width=self._width,
-                    bg=encode_color(task=task, today=today),
+                    background=background,
                     command=lambda i=idx: [main.destroy(),
-                                           self.edit_task(i)]).grid(row=row,
-                                                                    column=col)
+                                           self.edit_task(i)]).pack(padx=5,
+                                                                    pady=5)
+                border.grid(row=row, column=col)
                 row += 1
 
         frame_cols.pack(side=tkinter.TOP, expand=tkinter.YES, fill=tkinter.Y)
