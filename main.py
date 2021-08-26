@@ -14,7 +14,7 @@ PATH_PROJ = os.path.join(PATH_ROOT, '.proj')
 # Key for the tasks not to show.
 KEY_HIDDEN = 'hidden'
 # Allowed levels for tasks
-LEVELS = {'critical', 'high', 'normal'}
+LEVELS = {'critical', 'high', 'normal', 'low'}
 # Whether a weekday is working day [?, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday]
 WORKING_DAYS = (None, True, True, True, True, True, False, False)
 
@@ -46,8 +46,10 @@ def distance_date(start: datetime.datetime, end: datetime.datetime) -> int:
 
 def encode_color(task: dict, today: datetime.datetime) -> str:
     rule = {
-        'critical': 'red',
-        'high': 'yellow',
+        'critical': '#B22222',
+        'high': '#FFA500',
+        'normal': '#FDF5E6',
+        'low': '#9ACD32',
     }
     if 'level' in task and task['level'] in rule:
         return rule[task['level']]
