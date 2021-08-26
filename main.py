@@ -1,4 +1,5 @@
 import tkinter
+import tkinter.ttk
 import os
 import json
 import datetime
@@ -14,7 +15,7 @@ PATH_PROJ = os.path.join(PATH_ROOT, '.proj')
 # Key for the tasks not to show.
 KEY_HIDDEN = 'hidden'
 # Allowed levels for tasks
-LEVELS = {'critical', 'high', 'normal', 'low'}
+LEVELS = ['critical', 'high', 'normal', 'low']
 # Whether a weekday is working day [?, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday]
 WORKING_DAYS = (None, True, True, True, True, True, False, False)
 
@@ -94,7 +95,7 @@ class Project(object):
                 idx = (max(self._data['tasks'].keys()) +
                        1) if bool(self._data['tasks']) else 0
             deadline = text_deadline.get('1.0', tkinter.END).strip()
-            level = text_level.get('1.0', tkinter.END).strip()
+            level = comb_level.get()
             if parse_date(deadline) is not None and level in LEVELS:
                 step_to_be = (self._data['steps'] + [
                     KEY_HIDDEN,
@@ -136,10 +137,11 @@ class Project(object):
             tkinter.END, 'description' if task is None else task['text'])
         text_description.pack(side=tkinter.TOP)
 
-        text_level = tkinter.Text(dialog, height=3, width=self._width)
-        text_level.insert(tkinter.END,
-                          'normal' if task is None else task['level'])
-        text_level.pack(side=tkinter.TOP)
+        comb_level = tkinter.ttk.Combobox(dialog,
+                                          width=self._width,
+                                          values=LEVELS)
+        comb_level.current(2 if task is None else LEVELS.index(task['level']))
+        comb_level.pack(side=tkinter.TOP)
 
         text_deadline = tkinter.Text(dialog,
                                      height=self._height,
@@ -321,7 +323,6 @@ class Project(object):
 
 
 def start_project(name: str) -> None:
-    print("start ", name)
     project = Project(name)
     project.update_vis()
 
