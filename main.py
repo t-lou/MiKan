@@ -141,6 +141,8 @@ class Project(object):
 
         comb_level = tkinter.ttk.Combobox(dialog,
                                           width=self._width,
+                                          state='readonly',
+                                          justify='center',
                                           values=LEVELS)
         comb_level.current(2 if task is None else LEVELS.index(task['level']))
         comb_level.pack(side=tkinter.TOP)
