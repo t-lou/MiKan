@@ -65,6 +65,17 @@ def encode_color(task: dict, today: datetime.datetime) -> tuple:
     return background, border
 
 
+def list_date(size: int = 30) -> list:
+    result = []
+    date = datetime.datetime.now()
+    one_day = datetime.timedelta(days=1)
+    for i in range(size):
+        date += one_day
+        if WORKING_DAYS[date.isocalendar()[2]]:
+            result.append(format_date(date))
+    return result
+
+
 class Project(object):
     def __init__(self, name: str) -> None:
         self._name = name
@@ -96,7 +107,7 @@ class Project(object):
             if idx < 0:
                 idx = (max(self._data['tasks'].keys()) +
                        1) if bool(self._data['tasks']) else 0
-            deadline = text_deadline.get('1.0', tkinter.END).strip()
+            deadline = comb_deadline.get()
             level = comb_level.get()
             if parse_date(deadline) is not None and level in LEVELS:
                 step_to_be = (self._data['steps'] + [
@@ -147,14 +158,18 @@ class Project(object):
         comb_level.current(2 if task is None else LEVELS.index(task['level']))
         comb_level.pack(side=tkinter.TOP)
 
-        text_deadline = tkinter.Text(dialog,
-                                     height=self._height,
-                                     width=self._width)
-        text_deadline.insert(
-            tkinter.END,
-            format_date(datetime.datetime.now())
-            if task is None else task['deadline'])
-        text_deadline.pack(side=tkinter.TOP)
+        listed_dates = list_date(30)
+        str_today = format_date(datetime.datetime.now())
+        if task is not None and task['deadline'] not in listed_dates:
+            listed_dates = [task['deadline']] + listed_dates
+        comb_deadline = tkinter.ttk.Combobox(dialog,
+                                             justify='center',
+                                             width=self._width,
+                                             values=listed_dates)
+        comb_deadline.current(
+            listed_dates.index(
+                str_today if task is None else task['deadline']))
+        comb_deadline.pack(side=tkinter.TOP)
 
         if idx < 0:
             pack_button('add', lambda i=0: edit(idx, i))
