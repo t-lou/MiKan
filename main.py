@@ -21,6 +21,13 @@ WORKING_DAYS = (None, True, True, True, True, True, False, False)
 
 
 def parse_date(string: str) -> datetime.datetime:
+    '''
+    Parse one date written as "YYYY-MM-DD", such as "1992-01-15".
+    Parameters:
+        string: the string with date information.
+    Output:
+        The parsed date. If the format or content is not right, like "2020.02.30", None will be returned.
+    '''
     try:
         return datetime.datetime.strptime(string, '%Y-%m-%d')
     except:
@@ -28,13 +35,29 @@ def parse_date(string: str) -> datetime.datetime:
 
 
 def format_date(date: datetime.datetime) -> str:
-    try:
-        return date.strftime('%Y-%m-%d')
-    except:
-        return None
+    '''
+    Format one date as "YYYY-MM-DD", such as "1992-01-15".
+    Parameters:
+        date: the date to pack. The hour and minutes will be discarded.
+    Output:
+        The formatted string.
+    '''
+    return date.strftime('%Y-%m-%d')
 
 
 def distance_date(start: datetime.datetime, end: datetime.datetime) -> int:
+    '''
+    Count the number of working days between two dates.
+    Parameters:
+        start: the starting date.
+        end: the ending date.
+    Output:
+        Number of days in between. If start is after end, -1 will returned.
+    '''
+    start = datetime.datetime(year=start.year,
+                              month=start.month,
+                              day=start.day)
+    end = datetime.datetime(year=end.year, month=end.month, day=end.day)
     if start > end:
         return -1
     interval = datetime.timedelta(days=1)
@@ -46,6 +69,16 @@ def distance_date(start: datetime.datetime, end: datetime.datetime) -> int:
 
 
 def encode_color(task: dict, today: datetime.datetime) -> tuple:
+    '''
+    Decide the color of one task.
+    Parameters:
+        task: the task information.
+        today: the date of today.
+    Output:
+        (background color, border color):
+        background color shows how important the task is;
+        border color shows how urgend the task it.
+    '''
     rule = {
         'critical': '#B22222',
         'high': '#FFA500',
@@ -66,13 +99,20 @@ def encode_color(task: dict, today: datetime.datetime) -> tuple:
 
 
 def list_date(size: int = 30) -> list:
+    '''
+    List the following dates.
+    Parameters:
+        size: how many dates to list.
+    Output:
+        A list of strings containing the following dates since today.
+    '''
     result = []
     date = datetime.datetime.now()
     one_day = datetime.timedelta(days=1)
     for i in range(size):
-        date += one_day
         if WORKING_DAYS[date.isocalendar()[2]]:
             result.append(format_date(date))
+        date += one_day
     return result
 
 
@@ -159,7 +199,6 @@ class Project(object):
         comb_level.pack(side=tkinter.TOP)
 
         listed_dates = list_date(30)
-        str_today = format_date(datetime.datetime.now())
         if task is not None and task['deadline'] not in listed_dates:
             listed_dates = [task['deadline']] + listed_dates
         comb_deadline = tkinter.ttk.Combobox(dialog,
@@ -168,7 +207,8 @@ class Project(object):
                                              values=listed_dates)
         comb_deadline.current(
             listed_dates.index(
-                str_today if task is None else task['deadline']))
+                format_date(datetime.datetime.now()
+                            ) if task is None else task['deadline']))
         comb_deadline.pack(side=tkinter.TOP)
 
         if idx < 0:
