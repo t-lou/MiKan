@@ -168,7 +168,9 @@ class Project(object):
                            text=text,
                            height=self._height,
                            width=self._width,
-                           command=callback).pack(side=tkinter.TOP)
+                           command=callback).pack(side=tkinter.TOP,
+                                                  expand=tkinter.YES,
+                                                  fill=tkinter.BOTH)
 
         task = None if idx < 0 else self._data['tasks'][idx]
 
@@ -183,12 +185,16 @@ class Project(object):
                                   width=self._width)
         text_title.insert(tkinter.END,
                           'title' if task is None else task['title'])
-        text_title.pack(side=tkinter.TOP)
+        text_title.pack(side=tkinter.TOP,
+                        expand=tkinter.YES,
+                        fill=tkinter.BOTH)
 
         text_description = tkinter.Text(dialog, height=20, width=self._width)
         text_description.insert(
             tkinter.END, 'description' if task is None else task['text'])
-        text_description.pack(side=tkinter.TOP)
+        text_description.pack(side=tkinter.TOP,
+                              expand=tkinter.YES,
+                              fill=tkinter.BOTH)
 
         comb_level = tkinter.ttk.Combobox(dialog,
                                           width=self._width,
@@ -196,7 +202,7 @@ class Project(object):
                                           justify='center',
                                           values=LEVELS)
         comb_level.current(2 if task is None else LEVELS.index(task['level']))
-        comb_level.pack(side=tkinter.TOP)
+        comb_level.pack(side=tkinter.TOP, expand=tkinter.YES, fill=tkinter.X)
 
         listed_dates = list_date(30)
         if task is not None and task['deadline'] not in listed_dates:
@@ -209,7 +215,9 @@ class Project(object):
             listed_dates.index(
                 format_date(datetime.datetime.now()
                             ) if task is None else task['deadline']))
-        comb_deadline.pack(side=tkinter.TOP)
+        comb_deadline.pack(side=tkinter.TOP,
+                           expand=tkinter.YES,
+                           fill=tkinter.X)
 
         if idx < 0:
             pack_button('add', lambda i=0: edit(idx, i))
