@@ -126,9 +126,10 @@ class Project(object):
             int(k): v
             for k, v in self._data['tasks'].items()
         }
-        self._check()
+        self._check(self._data)
         self._height = 3
         self._width = 40
+        self._window_main = None
 
     def get_steps(self) -> list:
         return self._data['steps']
@@ -277,22 +278,31 @@ class Project(object):
                 command=lambda i=idx: [main.destroy(
                 ), self.edit_task(i)]).pack(side=tkinter.TOP)
 
-    def disp_raw(self) -> None:
+    def disp_text(self, disp_updated: bool = True) -> None:
+        def on_close():
+            try:
+                data = json.loads(text_field.get('1.0', tkinter.END).strip())
+                self._check(data)  # assert breaks and it will not continue
+                self._data = data
+                self.update_vis()
+            except:
+                pass
+            main.destroy()
+
         main = tkinter.Tk()
-        main.title(NAME + ' ' + self._name + ' raw')
+        main.title(NAME + ' ' + self._name +
+                   (' current' if disp_updated else ' saved'))
+        main.protocol('WM_DELETE_WINDOW', on_close)
 
-        text_raw = tkinter.Text(main, height=20, width=120)
-        with open(self._path, 'r') as fs:
-            text_raw.insert(tkinter.END, fs.read())
-        text_raw.pack(side=tkinter.TOP, expand=tkinter.YES, fill=tkinter.BOTH)
-
-    def disp_tmp(self) -> None:
-        main = tkinter.Tk()
-        main.title(NAME + ' ' + self._name + ' tmp')
-
-        text_raw = tkinter.Text(main, height=20, width=120)
-        text_raw.insert(tkinter.END, json.dumps(self._data, indent=' '))
-        text_raw.pack(side=tkinter.TOP, expand=tkinter.YES, fill=tkinter.BOTH)
+        text_field = tkinter.Text(main, height=20, width=120)
+        if disp_updated:
+            text_field.insert(tkinter.END, json.dumps(self._data, indent=' '))
+        else:
+            with open(self._path, 'r') as fs:
+                text_field.insert(tkinter.END, fs.read())
+        text_field.pack(side=tkinter.TOP,
+                        expand=tkinter.YES,
+                        fill=tkinter.BOTH)
 
     def check_on_close(self) -> None:
         data_curr = json.dumps(self._data, indent=' ')
@@ -315,27 +325,33 @@ class Project(object):
                            command=warning.destroy).pack(side=tkinter.TOP)
 
     def update_vis(self) -> None:
-        main = tkinter.Tk()
-        main.title(NAME + ' ' + self._name)
-        main.protocol('WM_DELETE_WINDOW',
-                      lambda: [self.check_on_close(),
-                               main.destroy()])
+        def reset():
+            if self._window_main is not None:
+                self._window_main.destroy()
+                self._window_main = None
+
+        reset()
+
+        self._window_main = tkinter.Tk()
+        self._window_main.title(NAME + ' ' + self._name)
+        self._window_main.protocol(
+            'WM_DELETE_WINDOW',
+            lambda: [self.check_on_close(), reset()])
 
         steps = self.get_steps()
 
         frames = []
-        frame_cols = tkinter.Frame(main)
-        frame_util = tkinter.Frame(main)
+        frame_cols = tkinter.Frame(self._window_main)
+        frame_util = tkinter.Frame(self._window_main)
 
         utils = {
-            'new': lambda: [main.destroy(), self.edit_task()],
+            'new': lambda: [reset(), self.edit_task()],
             'save': self.save,
             'backup': self.backup,
-            'delete': lambda: [main.destroy(), self.delete()],
-            'hidden':
-            lambda: [main.destroy(), self.disp_hidden()],
-            'raw': self.disp_raw,
-            'tmp': self.disp_tmp,
+            'delete': lambda: [reset(), self.delete()],
+            'hidden': lambda: [reset(), self.disp_hidden()],
+            'raw': lambda disp=False: self.disp_text(disp_updated=disp),
+            'tmp': lambda disp=True: self.disp_text(disp_updated=disp),
         }
         width_util = self._width * len(steps) // len(utils)
         for text, callback in utils.items():
@@ -361,34 +377,33 @@ class Project(object):
                     height=self._height,
                     width=self._width,
                     background=background,
-                    command=lambda i=idx: [main.destroy(),
-                                           self.edit_task(i)]).pack(padx=5,
-                                                                    pady=5)
+                    command=lambda i=idx: [reset(), self.edit_task(i)]).pack(
+                        padx=5, pady=5)
                 border.grid(row=row, column=col)
                 row += 1
 
         frame_cols.pack(side=tkinter.TOP, expand=tkinter.YES, fill=tkinter.Y)
         frame_util.pack(side=tkinter.TOP, expand=tkinter.YES, fill=tkinter.Y)
 
-    def _check(self) -> None:
+    def _check(self, data: dict) -> None:
         # check general
-        assert 'name' in self._data and type(self._data['name']) == str and bool(self._data['name']),\
+        assert 'name' in data and type(data['name']) == str and bool(data['name']),\
             'name in project not valid'
-        assert 'steps' in self._data and type(self._data['steps']) == list and bool(self._data['steps']),\
+        assert 'steps' in data and type(data['steps']) == list and bool(data['steps']),\
             'steps in project not valid'
-        assert 'tasks' in self._data and type(self._data['tasks']) == dict,\
+        assert 'tasks' in data and type(data['tasks']) == dict,\
             'tasks in project not valid'
         # check tasks
-        assert all('step' in task and (task['step'] in self._data['steps'] or task['step'] == KEY_HIDDEN)
-            for _, task in self._data['tasks'].items()),\
+        assert all('step' in task and (task['step'] in data['steps'] or task['step'] == KEY_HIDDEN)
+            for _, task in data['tasks'].items()),\
             'tasks have invalid step'
-        assert all('title' in task and bool(task['title']) for _, task in self._data['tasks'].items()),\
+        assert all('title' in task and bool(task['title']) for _, task in data['tasks'].items()),\
             'tasks have invalid title'
-        assert all('text' in task and bool(task['text']) for _, task in self._data['tasks'].items()),\
+        assert all('text' in task and bool(task['text']) for _, task in data['tasks'].items()),\
             'tasks have invalid text'
-        assert all('deadline' in task and parse_date(task['deadline']) is not None for _, task in self._data['tasks'].items()),\
+        assert all('deadline' in task and parse_date(task['deadline']) is not None for _, task in data['tasks'].items()),\
             'tasks have invalid deadline'
-        assert all('level' in task and task['level'] in LEVELS for _, task in self._data['tasks'].items()),\
+        assert all('level' in task and task['level'] in LEVELS for _, task in data['tasks'].items()),\
             'tasks have invalid level'
 
 
