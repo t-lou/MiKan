@@ -178,7 +178,7 @@ class Project(object):
         dialog.title(NAME + ' ' + self._name + ' new')
         dialog.protocol(
             'WM_DELETE_WINDOW',
-            lambda: [self.close_check(), dialog.destroy()])
+            lambda: [dialog.destroy(), self.update_vis()])
 
         text_title = tkinter.Text(dialog,
                                   height=self._height,
@@ -294,7 +294,7 @@ class Project(object):
         text_raw.insert(tkinter.END, json.dumps(self._data, indent=' '))
         text_raw.pack(side=tkinter.TOP, expand=tkinter.YES, fill=tkinter.BOTH)
 
-    def close_check(self) -> None:
+    def check_on_close(self) -> None:
         data_curr = json.dumps(self._data, indent=' ')
         with open(self._path, 'r') as fs:
             data_saved = fs.read()
@@ -317,9 +317,9 @@ class Project(object):
     def update_vis(self) -> None:
         main = tkinter.Tk()
         main.title(NAME + ' ' + self._name)
-        main.protocol(
-            'WM_DELETE_WINDOW',
-            lambda: [self.close_check(), main.destroy()])
+        main.protocol('WM_DELETE_WINDOW',
+                      lambda: [self.check_on_close(),
+                               main.destroy()])
 
         steps = self.get_steps()
 
