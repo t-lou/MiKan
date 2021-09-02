@@ -340,8 +340,11 @@ class Project(object):
 
         steps = self.get_steps()
 
-        frames = []
-        frame_cols = tkinter.Frame(self._window_main)
+        canvas = tkinter.Canvas(self._window_main)
+        scrollbar = tkinter.Scrollbar(self._window_main,
+                                      orient=tkinter.VERTICAL,
+                                      command=canvas.yview)
+        frame_cols = tkinter.Frame(canvas)
         frame_util = tkinter.Frame(self._window_main)
 
         utils = {
@@ -359,7 +362,9 @@ class Project(object):
                            text=text,
                            height=self._height,
                            width=width_util,
-                           command=callback).pack(side=tkinter.LEFT)
+                           command=callback).pack(side=tkinter.LEFT,
+                                                  expand=tkinter.YES,
+                                                  fill=tkinter.X)
 
         today = parse_date(format_date(datetime.datetime.now()))
         for col, step in enumerate(steps):
@@ -382,8 +387,14 @@ class Project(object):
                 border.grid(row=row, column=col)
                 row += 1
 
-        frame_cols.pack(side=tkinter.TOP, expand=tkinter.YES, fill=tkinter.Y)
-        frame_util.pack(side=tkinter.TOP, expand=tkinter.YES, fill=tkinter.Y)
+        scrollbar.pack(side=tkinter.RIGHT, fill=tkinter.Y)
+        canvas.create_window(0, 0, anchor=tkinter.N, window=frame_cols)
+        canvas.update_idletasks()
+        canvas.configure(scrollregion=canvas.bbox(tkinter.ALL),
+                         yscrollcommand=scrollbar.set)
+        canvas.pack(side=tkinter.TOP, expand=tkinter.YES, fill=tkinter.BOTH)
+        # frame_cols.pack(side=tkinter.TOP, expand=tkinter.YES, fill=tkinter.Y)
+        frame_util.pack(side=tkinter.BOTTOM, fill=tkinter.X)
 
     def _check(self, data: dict) -> None:
         # check general
