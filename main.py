@@ -340,7 +340,7 @@ class Project(object):
 
         steps = self.get_steps()
 
-        canvas = tkinter.Canvas(self._window_main)
+        canvas = tkinter.Canvas(self._window_main, width=800, height=600)
         scrollbar = tkinter.Scrollbar(self._window_main,
                                       orient=tkinter.VERTICAL,
                                       command=canvas.yview)
