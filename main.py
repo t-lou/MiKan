@@ -343,6 +343,16 @@ class Project(object):
         steps = self.get_steps()
 
         canvas = tkinter.Canvas(self._window_main, width=800, height=600)
+        # for windows, in testing
+        self._window_main.bind_all(
+            "<MouseWheel>", lambda event: canvas.yview_scroll(
+                1 if event.delta < 0 else 1, 'units'))
+        # for linux up-scrolling
+        self._window_main.bind_all("<Button-4>",
+                                   lambda _: canvas.yview_scroll(-1, 'units'))
+        # for linux down-scrolling
+        self._window_main.bind_all("<Button-5>",
+                                   lambda _: canvas.yview_scroll(1, 'units'))
         scrollbar = tkinter.Scrollbar(self._window_main,
                                       orient=tkinter.VERTICAL,
                                       command=canvas.yview)
