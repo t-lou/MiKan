@@ -205,7 +205,10 @@ class Project(object):
         comb_level.current(2 if task is None else LEVELS.index(task['level']))
         comb_level.pack(side=tkinter.TOP, expand=tkinter.YES, fill=tkinter.X)
 
+        str_today = format_date(datetime.datetime.now())
         listed_dates = list_date(30)
+        if task is None and str_today not in listed_dates:
+            listed_dates = [str_today] + listed_dates
         if task is not None and task['deadline'] not in listed_dates:
             listed_dates = [task['deadline']] + listed_dates
         comb_deadline = tkinter.ttk.Combobox(dialog,
@@ -214,8 +217,7 @@ class Project(object):
                                              values=listed_dates)
         comb_deadline.current(
             listed_dates.index(
-                format_date(datetime.datetime.now()
-                            ) if task is None else task['deadline']))
+                str_today if task is None else task['deadline']))
         comb_deadline.pack(side=tkinter.TOP,
                            expand=tkinter.YES,
                            fill=tkinter.X)
