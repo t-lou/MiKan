@@ -346,7 +346,7 @@ class Project(object):
         # for windows, in testing
         self._window_main.bind_all(
             "<MouseWheel>", lambda event: canvas.yview_scroll(
-                1 if event.delta < 0 else 1, 'units'))
+                1 if event.delta < 0 else -1, 'units'))
         # for linux up-scrolling
         self._window_main.bind_all("<Button-4>",
                                    lambda _: canvas.yview_scroll(-1, 'units'))
