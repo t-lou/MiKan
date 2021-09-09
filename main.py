@@ -18,6 +18,10 @@ KEY_HIDDEN = 'hidden'
 LEVELS = ['critical', 'high', 'normal', 'low']
 # Whether a weekday is working day [?, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday]
 WORKING_DAYS = (None, True, True, True, True, True, False, False)
+# Default height for components.
+BUTTON_HEIGHT = 3
+# Default width for components.
+BUTTON_WIDTH = 40
 
 
 def parse_date(string: str) -> datetime.datetime:
@@ -117,7 +121,15 @@ def list_date(size: int = 30) -> list:
 
 
 class Project(object):
+    '''
+    The management of tasks with GUI.
+    '''
     def __init__(self, name: str) -> None:
+        '''
+        Start the project with given name. The content must be already initialized.
+        Parameters:
+            name: name of the project file.
+        '''
         self._name = name
         self._path = os.path.join(PATH_PROJ, name + EXT)
         with open(self._path, 'r') as fs:
@@ -127,14 +139,26 @@ class Project(object):
             for k, v in self._data['tasks'].items()
         }
         self._check(self._data)
-        self._height = 3
-        self._width = 40
+        self._height = BUTTON_HEIGHT
+        self._width = BUTTON_WIDTH
         self._window_main = None
 
-    def get_steps(self) -> list:
+    def _get_steps(self) -> list:
+        '''
+        Get the defined steps in project.
+        Output:
+            The list of defined steps.
+        '''
         return self._data['steps']
 
-    def get_tasks_in_step(self, step: str) -> list:
+    def _get_tasks_in_step(self, step: str) -> dict:
+        '''
+        Get the tasks which are in the given step.
+        Parameters:
+            step: name of expected step.
+        Output:
+            Indexed tasks in the given step.
+        '''
         return {
             idx: task
             for idx, task in self._data['tasks'].items()
@@ -142,6 +166,11 @@ class Project(object):
         }
 
     def edit_task(self, idx: int = -1) -> None:
+        '''
+        Start a dialog for editing the task.
+        Parameters:
+            idx: the index of the task. If it is negative, the task will be initialized.
+        '''
         def edit(idx: int, i_step: int) -> None:
             title = text_title.get('1.0', tkinter.END).strip()
             assert '\n' not in title, 'title cannot contain newline'
@@ -151,7 +180,7 @@ class Project(object):
             deadline = comb_deadline.get()
             level = comb_level.get()
             if parse_date(deadline) is not None and level in LEVELS:
-                step_to_be = (self._data['steps'] + [
+                step_to_be = (self._get_steps() + [
                     KEY_HIDDEN,
                 ])[i_step]
                 self._data['tasks'][idx] = {
@@ -162,7 +191,7 @@ class Project(object):
                     'deadline': deadline,
                 }
                 dialog.destroy()
-                self.update_vis()
+                self.display()
 
         def pack_button(text: str, callback) -> None:
             tkinter.Button(dialog,
@@ -179,7 +208,7 @@ class Project(object):
         dialog.title(NAME + ' ' + self._name + ' new')
         dialog.protocol(
             'WM_DELETE_WINDOW',
-            lambda: [dialog.destroy(), self.update_vis()])
+            lambda: [dialog.destroy(), self.display()])
 
         text_title = tkinter.Text(dialog,
                                   height=self._height,
@@ -225,7 +254,7 @@ class Project(object):
         if idx < 0:
             pack_button('add', lambda i=0: edit(idx, i))
         else:
-            steps = self._data['steps']
+            steps = self._get_steps()
             if task['step'] != KEY_HIDDEN:
                 i_step = steps.index(task['step'])
                 pack_button('||| update |||', lambda i=i_step: edit(idx, i))
@@ -240,15 +269,26 @@ class Project(object):
                 pack_button(f'back to {steps[0]}', lambda i=0: edit(idx, i))
 
     def save(self, path: str = None) -> None:
+        '''
+        Save the project conditions.
+        Parameters:
+            path: the path to save project in json.
+        '''
         text_config = json.dumps(self._data, indent=' ')
         with open(self._path if path is None else path, 'w') as fs:
             fs.write(text_config)
 
     def backup(self) -> None:
+        '''
+        Back up the project condition with name and time.
+        '''
         self.save(self._path + '.' +
                   datetime.datetime.now().strftime('%Y%m%d%H%M%S') + '.back')
 
     def delete(self) -> None:
+        '''
+        Delete the current project. Backup will remain.
+        '''
         main = tkinter.Tk()
         main.title(NAME + ' ' + self._name)
         tkinter.Button(
@@ -260,6 +300,10 @@ class Project(object):
                              main.destroy()]).pack(side=tkinter.LEFT)
 
     def disp_hidden(self) -> None:
+        '''
+        Show the tasks in hidden status.
+        TODO make the list scrollbar.
+        '''
         main = tkinter.Tk()
         main.title(NAME + ' ' + self._name + ' hidden')
 
@@ -268,10 +312,10 @@ class Project(object):
             text='back',
             height=self._height,
             width=self._width,
-            command=lambda: [main.destroy(), self.update_vis()]).pack(
+            command=lambda: [main.destroy(), self.display()]).pack(
                 side=tkinter.TOP)
 
-        for idx, task in self.get_tasks_in_step(KEY_HIDDEN).items():
+        for idx, task in self._get_tasks_in_step(KEY_HIDDEN).items():
             tkinter.Button(
                 main,
                 text=(task['title'] + '\n' + task['deadline']),
@@ -281,12 +325,17 @@ class Project(object):
                 ), self.edit_task(i)]).pack(side=tkinter.TOP)
 
     def disp_text(self, disp_updated: bool = True) -> None:
+        '''
+        Show the json file with project content, and save by closing (when the text is valid).
+        Parameters:
+            disp_updated: whether to display and save the updated (or last saved) content.
+        '''
         def on_close():
             try:
                 data = json.loads(text_field.get('1.0', tkinter.END).strip())
                 self._check(data)  # assert breaks and it will not continue
                 self._data = data
-                self.update_vis()
+                self.display()
             except:
                 pass
             main.destroy()
@@ -307,6 +356,9 @@ class Project(object):
                         fill=tkinter.BOTH)
 
     def check_on_close(self) -> None:
+        '''
+        Check whether there is unsaved update; if so, pop up a dialog to save or discard.
+        '''
         data_curr = json.dumps(self._data, indent=' ')
         with open(self._path, 'r') as fs:
             data_saved = fs.read()
@@ -326,7 +378,10 @@ class Project(object):
                            width=self._width,
                            command=warning.destroy).pack(side=tkinter.TOP)
 
-    def update_vis(self) -> None:
+    def display(self) -> None:
+        '''
+        Show the kanban.
+        '''
         def reset():
             if self._window_main is not None:
                 self._window_main.destroy()
@@ -340,7 +395,7 @@ class Project(object):
             'WM_DELETE_WINDOW',
             lambda: [self.check_on_close(), reset()])
 
-        steps = self.get_steps()
+        steps = self._get_steps()
 
         canvas = tkinter.Canvas(self._window_main, width=800, height=600)
         # for windows, in testing
@@ -385,7 +440,7 @@ class Project(object):
                           width=self._width,
                           text=step).grid(row=0, rowspan=1, column=col)
             row = 1
-            for idx, task in self.get_tasks_in_step(step).items():
+            for idx, task in self._get_tasks_in_step(step).items():
                 background, border = encode_color(task=task, today=today)
                 border = tkinter.Frame(frame_cols, background=border)
                 tkinter.Button(
@@ -409,6 +464,11 @@ class Project(object):
         frame_util.pack(side=tkinter.BOTTOM, fill=tkinter.X)
 
     def _check(self, data: dict) -> None:
+        '''
+        Check whether the project content is valid.
+        Parameters:
+            data: the content (in dict) of project to check.
+        '''
         # check general
         assert 'name' in data and type(data['name']) == str and bool(data['name']),\
             'name in project not valid'
@@ -430,12 +490,10 @@ class Project(object):
             'tasks have invalid level'
 
 
-def start_project(name: str) -> None:
-    project = Project(name)
-    project.update_vis()
-
-
 def init_project() -> None:
+    '''
+    Initialize one project. It will pop out a dialog for defined steps.
+    '''
     def create() -> None:
         name = text_name.get('1.0', tkinter.END).strip()
         filename = os.path.join(PATH_PROJ, name + EXT)
@@ -458,8 +516,8 @@ def init_project() -> None:
         main.destroy()
         list_projects()
 
-    height = 3
-    width = 80
+    height = BUTTON_HEIGHT
+    width = BUTTON_WIDTH * 2
 
     main = tkinter.Tk()
     main.title(NAME + ' create')
@@ -482,8 +540,11 @@ def init_project() -> None:
 
 
 def list_projects() -> None:
-    height = 3
-    width = 80
+    '''
+    List the available projects and one button for creating new project.
+    '''
+    height = BUTTON_HEIGHT
+    width = BUTTON_WIDTH * 2
 
     if not os.path.isdir(PATH_PROJ):
         os.mkdir(PATH_PROJ)
@@ -508,7 +569,8 @@ def list_projects() -> None:
             height=height,
             width=width,
             command=lambda name=proj:
-            [root.destroy(), start_project(name=name)]).pack(side=tkinter.TOP)
+            [root.destroy(), Project(name=name).display()]).pack(
+                side=tkinter.TOP)
 
     tkinter.mainloop()
 
