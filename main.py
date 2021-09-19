@@ -302,27 +302,36 @@ class Project(object):
     def disp_hidden(self) -> None:
         '''
         Show the tasks in hidden status.
-        TODO make the list scrollbar.
         '''
         main = tkinter.Tk()
         main.title(NAME + ' ' + self._name + ' hidden')
+        main.protocol('WM_DELETE_WINDOW',
+                      lambda: [main.destroy(), self.display()])
 
-        tkinter.Button(
-            main,
-            text='back',
-            height=self._height,
-            width=self._width,
-            command=lambda: [main.destroy(), self.display()]).pack(
-                side=tkinter.TOP)
+        canvas = tkinter.Canvas(main, height=600)
+        self.bind_canvas(window=main, canvas=canvas)
+        scrollbar = tkinter.Scrollbar(main,
+                                      orient=tkinter.VERTICAL,
+                                      command=canvas.yview)
+        frame_hidden_tasks = tkinter.Frame(canvas)
 
         for idx, task in self._get_tasks_in_step(KEY_HIDDEN).items():
-            tkinter.Button(
-                main,
-                text=(task['title'] + '\n' + task['deadline']),
-                height=self._height,
-                width=self._width,
-                command=lambda i=idx: [main.destroy(
-                ), self.edit_task(i)]).pack(side=tkinter.TOP)
+            tkinter.Button(frame_hidden_tasks,
+                           text=(task['title'] + '\n' + task['deadline']),
+                           height=self._height,
+                           width=self._width,
+                           command=lambda i=idx:
+                           [main.destroy(), self.edit_task(i)]).pack(
+                               side=tkinter.TOP,
+                               expand=tkinter.YES,
+                               fill=tkinter.X)
+
+        scrollbar.pack(side=tkinter.RIGHT, fill=tkinter.BOTH)
+        canvas.create_window(0, 0, anchor=tkinter.N, window=frame_hidden_tasks)
+        canvas.update_idletasks()
+        canvas.configure(scrollregion=canvas.bbox(tkinter.ALL),
+                         yscrollcommand=scrollbar.set)
+        canvas.pack(side=tkinter.TOP, expand=tkinter.YES, fill=tkinter.BOTH)
 
     def disp_text(self, disp_updated: bool = True) -> None:
         '''
@@ -378,6 +387,25 @@ class Project(object):
                            width=self._width,
                            command=warning.destroy).pack(side=tkinter.TOP)
 
+    @staticmethod
+    def bind_canvas(window: tkinter.Tk, canvas: tkinter.Canvas) -> None:
+        '''
+        Make the canvas scrollbar with mouse wheel.
+        Parameters:
+            window: The window where the canvas is.
+            canvas: The canvas where scrollbar content is.
+        '''
+        # for windows, in testing
+        window.bind_all(
+            "<MouseWheel>", lambda event: canvas.yview_scroll(
+                1 if event.delta < 0 else -1, 'units'))
+        # for linux up-scrolling
+        window.bind_all("<Button-4>",
+                        lambda _: canvas.yview_scroll(-1, 'units'))
+        # for linux down-scrolling
+        window.bind_all("<Button-5>",
+                        lambda _: canvas.yview_scroll(1, 'units'))
+
     def display(self) -> None:
         '''
         Show the kanban.
@@ -398,16 +426,7 @@ class Project(object):
         steps = self._get_steps()
 
         canvas = tkinter.Canvas(self._window_main, width=800, height=600)
-        # for windows, in testing
-        self._window_main.bind_all(
-            "<MouseWheel>", lambda event: canvas.yview_scroll(
-                1 if event.delta < 0 else -1, 'units'))
-        # for linux up-scrolling
-        self._window_main.bind_all("<Button-4>",
-                                   lambda _: canvas.yview_scroll(-1, 'units'))
-        # for linux down-scrolling
-        self._window_main.bind_all("<Button-5>",
-                                   lambda _: canvas.yview_scroll(1, 'units'))
+        self.bind_canvas(window=self._window_main, canvas=canvas)
         scrollbar = tkinter.Scrollbar(self._window_main,
                                       orient=tkinter.VERTICAL,
                                       command=canvas.yview)
