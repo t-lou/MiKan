@@ -34,7 +34,8 @@ def parse_date(string: str) -> datetime.datetime:
     """
     try:
         return datetime.datetime.strptime(string, "%Y-%m-%d")
-    except:
+    except Exception as error:
+        print(f"failed to parse date string: {error}")
         return None
 
 
@@ -341,7 +342,8 @@ class Project(object):
                 self._check(data)  # assert breaks and it will not continue
                 self._data = data
                 self.display()
-            except:
+            except AssertionError as errer:
+                print(f"data check failed, will just close: {errer}")
                 pass
             main.destroy()
 
@@ -484,13 +486,13 @@ class Project(object):
             data: the content (in dict) of project to check.
         """
         # check general
-        assert "name" in data and type(data["name"]) == str and bool(data["name"]), (
-            "name in project not valid"
-        )
         assert (
-            "steps" in data and type(data["steps"]) == list and bool(data["steps"])
+            "name" in data and isinstance(data["name"], str) and bool(data["name"])
+        ), "name in project not valid"
+        assert (
+            "steps" in data and isinstance(data["steps"], list) and bool(data["steps"])
         ), "steps in project not valid"
-        assert "tasks" in data and type(data["tasks"]) == dict, (
+        assert "tasks" in data and isinstance(data["tasks"], dict), (
             "tasks in project not valid"
         )
         # check tasks
