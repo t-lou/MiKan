@@ -342,8 +342,8 @@ class Project(object):
                 self._check(data)  # assert breaks and it will not continue
                 self._data = data
                 self.display()
-            except AssertionError as errer:
-                print(f"data check failed, will just close: {errer}")
+            except AssertionError as error:
+                print(f"data check failed, will just close: {error}")
                 pass
             main.destroy()
 
