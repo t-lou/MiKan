@@ -1,20 +1,107 @@
-# MiKan is the personal Kanban for your tasks
+# MiKan — A Lightweight Personal Kanban Board
 
-- Overview for the project
+MiKan is a simple, local, GUI‑based personal Kanban tool built with Python and Tkinter.
+It helps you organize tasks visually, track progress across customizable steps, and manage deadlines with intuitive color cues.
 
-![image](https://github.com/t-lou/MiKan/blob/master/screenshots/window_main.png)
+---
 
-    - new -> create new task
-    - save -> save the project
-    - backup -> create a backup for the project
-    - delete -> delete the project
-    - hidden -> display obsolete tasks for reopening
-    - raw -> display the raw config of project (display only)
-    - tmp -> display the current config of project (display only)
+## Features
 
-- Create new task in project
-- Modify tasks <- edit the content, change the status
+### Customizable workflow
 
-![image](https://github.com/t-lou/MiKan/blob/master/screenshots/dialog_task.png)
+- **Define steps:** Create your own workflow stages (for example: `to_start → in_progress → in_verification → finished`).
+- **Move tasks:** Shift tasks between steps with a single click.
+- **Hide tasks:** Move finished or inactive tasks into a hidden state and restore them later.
 
-- View the finished tasks (hidden is the status after the last defined status) and recycle
+### Task editing dialog
+
+Each task includes:
+
+- **Title**
+- **Description**
+- **Level:** One of `critical`, `high`, `normal`, `low`
+- **Deadline:** In the format `YYYY-MM-DD`
+
+**Color logic:**
+
+- **Background color:** Indicates importance (based on level).
+- **Border color:** Indicates urgency (based on how close the deadline is).
+
+### Project utilities
+
+The bottom toolbar provides quick access to common actions:
+
+- **new:** Create a new task.
+- **save:** Save the current project.
+- **backup:** Save a timestamped backup of the project file.
+- **delete:** Delete the project file (backups remain).
+- **hidden:** Show tasks that are in the hidden step.
+- **raw:** View the project as it is saved on disk (JSON).
+- **tmp:** View the current in‑memory project state (JSON).
+
+---
+
+## Screenshots
+
+### Main window
+
+![Main Window](https://github.com/t-lou/MiKan/raw/master/screenshots/window_main.png)
+
+### Task editing dialog
+
+![Task Dialog](https://github.com/t-lou/MiKan/raw/master/screenshots/dialog_task.png)
+
+---
+
+## Getting started
+
+### Requirements
+
+- Python 3.x
+- Tkinter (included with most standard Python installations)
+
+### Running the application
+
+From the project directory, run:
+
+```bash
+python main.py
+```
+
+### Creating a project
+
+1. Launch the program.
+2. Click **create project**.
+3. Enter a project name.
+4. Define your workflow steps (one per line).
+5. Start adding tasks to your new board.
+
+---
+
+## Project file format
+
+Each project is stored as a JSON file under the `.proj/` directory.
+
+Example:
+
+```json
+{
+  "name": "example",
+  "steps": ["to_start", "in_progress", "finished"],
+  "tasks": {
+    "0": {
+      "step": "to_start",
+      "title": "Example task",
+      "text": "Description",
+      "level": "normal",
+      "deadline": "2025-01-01"
+    }
+  }
+}
+```
+
+### Notes
+
+- Hidden tasks use a special step named `"hidden"`.
+- Deadlines must follow the `YYYY-MM-DD` format.
+- Everything is stored locally; there is no network or cloud component.
