@@ -26,6 +26,19 @@ BUTTON_HEIGHT = 3
 # Default width for components.
 BUTTON_WIDTH = 40
 
+# Single root window to keep GUI consistent
+ROOT = tkinter.Tk()
+ROOT.title(NAME)
+
+
+def create_window(title: str) -> tkinter.Toplevel:
+    """
+    Create a child window of the single ROOT instead of a new Tk instance.
+    """
+    win = tkinter.Toplevel(ROOT)
+    win.title(title)
+    return win
+
 
 def parse_date(string: str) -> Optional[datetime.datetime]:
     """
@@ -134,7 +147,7 @@ class Project(object):
         self._check(self._data)
         self._height = BUTTON_HEIGHT
         self._width = BUTTON_WIDTH
-        self._window_main: Optional[tkinter.Tk] = None
+        self._window_main: Optional[tkinter.Toplevel] = None
 
     def _get_steps(self) -> List[str]:
         """
@@ -184,8 +197,7 @@ class Project(object):
 
         task = None if idx < 0 else self._data["tasks"][idx]
 
-        dialog = tkinter.Tk()
-        dialog.title(NAME + " " + self._name + " new")
+        dialog = create_window(NAME + " " + self._name + " new")
         dialog.protocol("WM_DELETE_WINDOW", lambda: [dialog.destroy(), self.display()])
 
         text_title = tkinter.Text(dialog, height=self._height, width=self._width)
@@ -248,22 +260,20 @@ class Project(object):
         """
         Delete the current project. Backup will remain.
         """
-        main = tkinter.Tk()
-        main.title(NAME + " " + self._name)
+        main = create_window(NAME + " " + self._name)
         tkinter.Button(
             main,
             text="delete project",
             height=self._height,
             width=self._width,
-            command=lambda: [os.remove(self._path), main.destroy()],
+            command=lambda: [os.remove(self._path), main.destroy(), list_projects()],
         ).pack(side=tkinter.LEFT)
 
     def disp_hidden(self) -> None:
         """
         Show the tasks in hidden status.
         """
-        main = tkinter.Tk()
-        main.title(NAME + " " + self._name + " hidden")
+        main = create_window(NAME + " " + self._name + " hidden")
         main.protocol("WM_DELETE_WINDOW", lambda: [main.destroy(), self.display()])
 
         canvas = tkinter.Canvas(main, height=600)
@@ -304,8 +314,7 @@ class Project(object):
             finally:
                 main.destroy()
 
-        main = tkinter.Tk()
-        main.title(NAME + " " + self._name + (" current" if disp_updated else " saved"))
+        main = create_window(NAME + " " + self._name + (" current" if disp_updated else " saved"))
         main.protocol("WM_DELETE_WINDOW", on_close)
 
         text_field = tkinter.Text(main, height=20, width=120)
@@ -324,8 +333,7 @@ class Project(object):
         with open(self._path, "r", encoding="utf-8") as fs:
             data_saved = fs.read()
         if data_curr != data_saved:
-            warning = tkinter.Tk()
-            warning.title("warning")
+            warning = create_window("warning")
             tkinter.Button(
                 warning,
                 text="save",
@@ -342,7 +350,7 @@ class Project(object):
             ).pack(side=tkinter.TOP)
 
     @staticmethod
-    def bind_canvas(window: tkinter.Tk, canvas: tkinter.Canvas) -> None:
+    def bind_canvas(window: tkinter.Toplevel, canvas: tkinter.Canvas) -> None:
         """
         Make the canvas scrollable with mouse wheel.
         """
@@ -368,8 +376,7 @@ class Project(object):
 
         reset()
 
-        self._window_main = tkinter.Tk()
-        self._window_main.title(NAME + " " + self._name)
+        self._window_main = create_window(NAME + " " + self._name)
         self._window_main.protocol("WM_DELETE_WINDOW", lambda: [self.check_on_close(), reset()])
 
         steps = self._get_steps()
@@ -483,8 +490,7 @@ def init_project() -> None:
     height = BUTTON_HEIGHT
     width = BUTTON_WIDTH * 2
 
-    main = tkinter.Tk()
-    main.title(NAME + " create")
+    main = create_window(NAME + " create")
 
     text_name = tkinter.Text(main, height=height, width=width)
     text_name.insert(tkinter.END, "name_of_the_new_project")
@@ -512,7 +518,9 @@ def list_projects() -> None:
 
     projs = tuple(proj[: -len(EXT)] for proj in os.listdir(PATH_PROJ) if proj.endswith(EXT))
 
-    root = tkinter.Tk()
+    root = ROOT
+    for child in root.winfo_children():
+        child.destroy()
     root.title(NAME)
 
     tkinter.Button(
@@ -520,7 +528,7 @@ def list_projects() -> None:
         text="create project",
         height=height,
         width=width,
-        command=lambda: [root.destroy(), init_project()],
+        command=lambda: [init_project()],
     ).pack(side=tkinter.TOP)
 
     for proj in projs:
@@ -529,11 +537,12 @@ def list_projects() -> None:
             text=proj,
             height=height,
             width=width,
-            command=lambda name=proj: [root.destroy(), Project(name=name).display()],
+            command=lambda name=proj: Project(name=name).display(),
         ).pack(side=tkinter.TOP)
 
-    tkinter.mainloop()
+    root.deiconify()
 
 
 if __name__ == "__main__":
     list_projects()
+    ROOT.mainloop()
