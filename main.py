@@ -119,6 +119,37 @@ def list_date(size: int = 30) -> list[str]:
     return result
 
 
+def validate_task(title: str, description: str, deadline: str, level: str) -> str | None:
+    """
+    Validate task fields and return an error message when invalid.
+    """
+    if not title:
+        return "A task title is required."
+    if not description:
+        return "A task description is required."
+    if parse_date(deadline) is None:
+        return "Deadline must use the YYYY-MM-DD format."
+    if level not in LEVELS:
+        return "Select a valid task level."
+    return None
+
+
+def pack_dialog_button(
+    dialog: tkinter.Toplevel,
+    height: int,
+    width: int,
+    text: str,
+    callback,
+) -> None:
+    tkinter.Button(
+        dialog,
+        text=text,
+        height=height,
+        width=width,
+        command=callback,
+    ).pack(side=tkinter.TOP, expand=tkinter.YES, fill=tkinter.BOTH)
+
+
 class Project:
     """
     The management of tasks with GUI.
@@ -150,6 +181,35 @@ class Project:
         """
         return {idx: task for idx, task in self._data["tasks"].items() if task["step"] == step}
 
+    def pack_task_buttons(self, dialog: tkinter.Toplevel, idx: int, task: dict | None, edit) -> None:
+        if idx < 0:
+            pack_dialog_button(dialog, self._height, self._width, "add", lambda i=0: edit(idx, i))
+            return
+
+        steps = self._get_steps()
+        if task["step"] == KEY_HIDDEN:
+            pack_dialog_button(dialog, self._height, self._width, f"back to {steps[0]}", lambda i=0: edit(idx, i))
+            return
+
+        i_step = steps.index(task["step"])
+        pack_dialog_button(dialog, self._height, self._width, "||| update |||", lambda i=i_step: edit(idx, i))
+        if i_step > 0:
+            pack_dialog_button(
+                dialog,
+                self._height,
+                self._width,
+                f"<<< {steps[i_step - 1]} <<<",
+                lambda i=i_step - 1: edit(idx, i),
+            )
+        if i_step + 1 <= len(steps):
+            pack_dialog_button(
+                dialog,
+                self._height,
+                self._width,
+                f">>> {(steps + [KEY_HIDDEN])[i_step + 1]} >>>",
+                lambda i=i_step + 1: edit(idx, i),
+            )
+
     def edit_task(self, idx: int = -1) -> None:
         """
         Start a dialog for editing the task.
@@ -161,17 +221,9 @@ class Project:
             description = text_description.get("1.0", tkinter.END).strip()
             deadline = comb_deadline.get()
             level = comb_level.get()
-            if not title:
-                tkinter.messagebox.showerror(NAME, "A task title is required.")
-                return
-            if not description:
-                tkinter.messagebox.showerror(NAME, "A task description is required.")
-                return
-            if parse_date(deadline) is None:
-                tkinter.messagebox.showerror(NAME, "Deadline must use the YYYY-MM-DD format.")
-                return
-            if level not in LEVELS:
-                tkinter.messagebox.showerror(NAME, "Select a valid task level.")
+            error = validate_task(title, description, deadline, level)
+            if error is not None:
+                tkinter.messagebox.showerror(NAME, error)
                 return
             if idx_inner < 0:
                 idx_inner = (max(self._data["tasks"].keys()) + 1) if bool(self._data["tasks"]) else 0
@@ -185,15 +237,6 @@ class Project:
             }
             dialog.destroy()
             self.display()
-
-        def pack_button(text: str, callback) -> None:
-            tkinter.Button(
-                dialog,
-                text=text,
-                height=self._height,
-                width=self._width,
-                command=callback,
-            ).pack(side=tkinter.TOP, expand=tkinter.YES, fill=tkinter.BOTH)
 
         task = None if idx < 0 else self._data["tasks"][idx]
 
@@ -222,25 +265,7 @@ class Project:
         comb_deadline.current(listed_dates.index(str_today if task is None else task["deadline"]))
         comb_deadline.pack(side=tkinter.TOP, expand=tkinter.YES, fill=tkinter.X)
 
-        if idx < 0:
-            pack_button("add", lambda i=0: edit(idx, i))
-        else:
-            steps = self._get_steps()
-            if task["step"] != KEY_HIDDEN:
-                i_step = steps.index(task["step"])
-                pack_button("||| update |||", lambda i=i_step: edit(idx, i))
-                if i_step > 0:
-                    pack_button(
-                        f"<<< {steps[i_step - 1]} <<<",
-                        lambda i=(i_step - 1): edit(idx, i),
-                    )
-                if i_step + 1 <= len(steps):
-                    pack_button(
-                        f">>> {(steps + [KEY_HIDDEN])[i_step + 1]} >>>",
-                        lambda i=(i_step + 1): edit(idx, i),
-                    )
-            else:
-                pack_button(f"back to {steps[0]}", lambda i=0: edit(idx, i))
+        self.pack_task_buttons(dialog, idx, task, edit)
 
     def save(self, path: str | None = None) -> None:
         """
