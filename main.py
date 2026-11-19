@@ -5,7 +5,6 @@ import json
 import os
 import tkinter
 import tkinter.ttk
-from typing import Dict, List, Optional, Tuple
 
 # Name of the program.
 NAME = "MiKan"
@@ -40,7 +39,7 @@ def create_window(title: str) -> tkinter.Toplevel:
     return win
 
 
-def parse_date(string: str) -> Optional[datetime.datetime]:
+def parse_date(string: str) -> datetime.datetime | None:
     """
     Parse one date written as "YYYY-MM-DD".
     """
@@ -86,7 +85,7 @@ def distance_date(start: datetime.datetime, end: datetime.datetime) -> int:
     return working
 
 
-def encode_color(task: dict, today: datetime.datetime) -> Tuple[str, str]:
+def encode_color(task: dict, today: datetime.datetime) -> tuple[str, str]:
     """
     Decide the color of one task.
     background: importance
@@ -116,11 +115,11 @@ def encode_color(task: dict, today: datetime.datetime) -> Tuple[str, str]:
     return background, border
 
 
-def list_date(size: int = 30) -> List[str]:
+def list_date(size: int = 30) -> list[str]:
     """
     List the following working dates (today + forward).
     """
-    result: List[str] = []
+    result: list[str] = []
     date = datetime.datetime.now()
     one_day = datetime.timedelta(days=1)
     for _ in range(size):
@@ -130,7 +129,7 @@ def list_date(size: int = 30) -> List[str]:
     return result
 
 
-class Project(object):
+class Project:
     """
     The management of tasks with GUI.
     """
@@ -141,21 +140,21 @@ class Project(object):
         """
         self._name = name
         self._path = os.path.join(PATH_PROJ, name + EXT)
-        with open(self._path, "r", encoding="utf-8") as fs:
+        with open(self._path, encoding="utf-8") as fs:
             self._data = json.load(fs)
         self._data["tasks"] = {int(k): v for k, v in self._data["tasks"].items()}
         self._check(self._data)
         self._height = BUTTON_HEIGHT
         self._width = BUTTON_WIDTH
-        self._window_main: Optional[tkinter.Toplevel] = None
+        self._window_main: tkinter.Toplevel | None = None
 
-    def _get_steps(self) -> List[str]:
+    def _get_steps(self) -> list[str]:
         """
         Get the defined steps in project.
         """
         return list(self._data["steps"])
 
-    def _get_tasks_in_step(self, step: str) -> Dict[int, dict]:
+    def _get_tasks_in_step(self, step: str) -> dict[int, dict]:
         """
         Get the tasks which are in the given step.
         """
@@ -242,7 +241,7 @@ class Project(object):
             else:
                 pack_button(f"back to {steps[0]}", lambda i=0: edit(idx, i))
 
-    def save(self, path: Optional[str] = None) -> None:
+    def save(self, path: str | None = None) -> None:
         """
         Save the project conditions.
         """
@@ -321,7 +320,7 @@ class Project(object):
         if disp_updated:
             text_field.insert(tkinter.END, json.dumps(self._data, indent=1))
         else:
-            with open(self._path, "r", encoding="utf-8") as fs:
+            with open(self._path, encoding="utf-8") as fs:
                 text_field.insert(tkinter.END, fs.read())
         text_field.pack(side=tkinter.TOP, expand=tkinter.YES, fill=tkinter.BOTH)
 
@@ -330,7 +329,7 @@ class Project(object):
         Check whether there is unsaved update; if so, pop up a dialog to save or discard.
         """
         data_curr = json.dumps(self._data, indent=1)
-        with open(self._path, "r", encoding="utf-8") as fs:
+        with open(self._path, encoding="utf-8") as fs:
             data_saved = fs.read()
         if data_curr != data_saved:
             warning = create_window("warning")
