@@ -4,6 +4,7 @@ import datetime
 import json
 import os
 import tkinter
+import tkinter.messagebox
 import tkinter.ttk
 
 # Name of the program.
@@ -44,9 +45,9 @@ def parse_date(string: str) -> datetime.datetime | None:
     Parse one date written as "YYYY-MM-DD".
     """
     try:
-        return datetime.datetime.strptime(string, "%Y-%m-%d")
-    except Exception as error:
-        print(f"failed to parse date string: {error}")
+        date = datetime.datetime.strptime(string, "%Y-%m-%d")
+        return date if format_date(date) == string else None
+    except (TypeError, ValueError):
         return None
 
 
@@ -68,20 +69,12 @@ def distance_date(start: datetime.datetime, end: datetime.datetime) -> int:
     if start_date > end_date:
         return -1
 
-    delta_days = (end_date - start_date).days
-    if delta_days == 0:
-        return 0
-
-    full_weeks, extra_days = divmod(delta_days, 7)
-
-    # Monday=1, Sunday=7
-    start_weekday = start_date.isocalendar()[2]
-
-    working = full_weeks * 5
-    for i in range(extra_days):
-        weekday = (start_weekday + i - 1) % 7 + 1
-        if WORKING_DAYS[weekday]:
+    working = 0
+    current = start_date
+    while current < end_date:
+        if WORKING_DAYS[current.isocalendar().weekday]:
             working += 1
+        current += datetime.timedelta(days=1)
     return working
 
 
@@ -165,22 +158,33 @@ class Project:
 
         def edit(idx_inner: int, i_step: int) -> None:
             title = text_title.get("1.0", tkinter.END).strip()
-            assert "\n" not in title, "title cannot contain newline"
-            if idx_inner < 0:
-                idx_inner = (max(self._data["tasks"].keys()) + 1) if bool(self._data["tasks"]) else 0
+            description = text_description.get("1.0", tkinter.END).strip()
             deadline = comb_deadline.get()
             level = comb_level.get()
-            if parse_date(deadline) is not None and level in LEVELS:
-                step_to_be = (self._get_steps() + [KEY_HIDDEN])[i_step]
-                self._data["tasks"][idx_inner] = {
-                    "step": step_to_be,
-                    "title": title,
-                    "text": text_description.get("1.0", tkinter.END).strip(),
-                    "level": level,
-                    "deadline": deadline,
-                }
-                dialog.destroy()
-                self.display()
+            if not title:
+                tkinter.messagebox.showerror(NAME, "A task title is required.")
+                return
+            if not description:
+                tkinter.messagebox.showerror(NAME, "A task description is required.")
+                return
+            if parse_date(deadline) is None:
+                tkinter.messagebox.showerror(NAME, "Deadline must use the YYYY-MM-DD format.")
+                return
+            if level not in LEVELS:
+                tkinter.messagebox.showerror(NAME, "Select a valid task level.")
+                return
+            if idx_inner < 0:
+                idx_inner = (max(self._data["tasks"].keys()) + 1) if bool(self._data["tasks"]) else 0
+            step_to_be = (self._get_steps() + [KEY_HIDDEN])[i_step]
+            self._data["tasks"][idx_inner] = {
+                "step": step_to_be,
+                "title": title,
+                "text": description,
+                "level": level,
+                "deadline": deadline,
+            }
+            dialog.destroy()
+            self.display()
 
         def pack_button(text: str, callback) -> None:
             tkinter.Button(
@@ -257,12 +261,19 @@ class Project:
         Delete the current project. Backup will remain.
         """
         main = create_window(NAME + " " + self._name)
+
+        def delete_project() -> None:
+            if tkinter.messagebox.askyesno(NAME, f"Delete project '{self._name}'?"):
+                os.remove(self._path)
+                main.destroy()
+                list_projects()
+
         tkinter.Button(
             main,
             text="delete project",
             height=self._height,
             width=self._width,
-            command=lambda: [os.remove(self._path), main.destroy(), list_projects()],
+            command=delete_project,
         ).pack(side=tkinter.LEFT)
 
     def disp_hidden(self) -> None:
@@ -305,8 +316,8 @@ class Project:
                 data["tasks"] = {int(k): v for k, v in data["tasks"].items()}
                 self._data = data
                 self.display()
-            except AssertionError as error:
-                print(f"data check failed, will just close: {error}")
+            except (json.JSONDecodeError, AssertionError, KeyError, ValueError, TypeError) as error:
+                tkinter.messagebox.showerror(NAME, f"Invalid project data:\n{error}")
             finally:
                 main.destroy()
 
@@ -441,6 +452,7 @@ class Project:
         assert "tasks" in data and isinstance(data["tasks"], dict), "tasks in project not valid"
 
         tasks = data["tasks"]
+        assert all(isinstance(task, dict) for task in tasks.values()), "tasks must be objects"
 
         # step
         assert all(
@@ -466,11 +478,21 @@ def init_project() -> None:
 
     def create() -> None:
         name = text_name.get("1.0", tkinter.END).strip()
+        if not name or "/" in name or "\\" in name:
+            tkinter.messagebox.showerror(NAME, "Project name must be non-empty and cannot contain path separators.")
+            return
         filename = os.path.join(PATH_PROJ, name + EXT)
-        assert "\n" not in name, "name cannot contain newline"
-        assert not os.path.isfile(filename), "name exists"
+        if os.path.isfile(filename):
+            tkinter.messagebox.showerror(NAME, "A project with that name already exists.")
+            return
         steps = tuple(it.strip() for it in text_steps.get("1.0", tkinter.END).split("\n"))
-        steps = tuple(step for step in steps if bool(step) and step != KEY_HIDDEN)
+        steps = tuple(dict.fromkeys(step for step in steps if step and step != KEY_HIDDEN))
+        if not steps:
+            tkinter.messagebox.showerror(NAME, "Define at least one workflow step.")
+            return
+        if len(steps) > 20:
+            tkinter.messagebox.showerror(NAME, "A project can contain at most 20 workflow steps.")
+            return
 
         config = {
             "name": name,
@@ -512,7 +534,10 @@ def list_projects() -> None:
     if not os.path.isdir(PATH_PROJ):
         os.mkdir(PATH_PROJ)
 
-    projs = tuple(proj[: -len(EXT)] for proj in os.listdir(PATH_PROJ) if proj.endswith(EXT))
+    projs = sorted(
+        (proj[: -len(EXT)] for proj in os.listdir(PATH_PROJ) if proj.endswith(EXT)),
+        key=str.casefold,
+    )
 
     root = ROOT
     for child in root.winfo_children():
