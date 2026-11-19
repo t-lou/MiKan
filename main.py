@@ -21,6 +21,17 @@ PATH_PROJ = os.path.join(PATH_ROOT, ".proj")
 KEY_HIDDEN = "hidden"
 # Allowed levels for tasks.
 LEVELS: list[str] = ["critical", "high", "normal", "low"]
+# Priority background and text colors.
+PRIORITY_COLORS: dict[str, tuple[str, str]] = {
+    "critical": ("#C62828", "#FFFFFF"),
+    "high": ("#EF9A9A", "#7F0000"),
+    "normal": ("#E8EEF5", "#263238"),
+    "low": ("#A5D6A7", "#1B5E20"),
+}
+# Deadline urgency border colors.
+URGENT_BORDER = "#B71C1C"
+SOON_BORDER = "#EF6C00"
+SCHEDULED_BORDER = "#78909C"
 # Whether a weekday is working day [?, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday]
 WORKING_DAYS: tuple[bool | None, ...] = (None, True, True, True, True, True, False, False)
 # Default height for components.
@@ -140,36 +151,30 @@ def distance_date(start: datetime.datetime, end: datetime.datetime) -> int:
     return working
 
 
-def encode_color(task: Task, today: datetime.datetime) -> tuple[str, str]:
+def encode_color(task: Task, today: datetime.datetime) -> tuple[str, str, str]:
     """
-    Choose task background and deadline urgency colors.
+    Choose task priority, deadline urgency, and text colors.
 
     Args:
         task: Task whose importance and deadline determine the colors.
         today: Date used to calculate deadline urgency.
 
     Returns:
-        A pair containing the background color and border color.
+        A triple containing the background color, border color, and text color.
     """
-    rule = {
-        "critical": "#B22222",
-        "high": "#FFA500",
-        "normal": "#FDF5E6",
-        "low": "#9ACD32",
-    }
-    background = rule[task["level"]]
+    background, foreground = PRIORITY_COLORS[task["level"]]
 
     deadline_dt = parse_date(task["deadline"])
     interval = 9999 if deadline_dt is None else distance_date(today, deadline_dt)
 
     if interval <= 1:
-        border = "#B22222"
+        border = URGENT_BORDER
     elif interval <= 3:
-        border = "#FFA500"
+        border = SOON_BORDER
     else:
-        border = background
+        border = SCHEDULED_BORDER
 
-    return background, border
+    return background, border, foreground
 
 
 def list_date(size: int = 30) -> list[str]:
@@ -427,14 +432,21 @@ class Project:
         scrollbar = tkinter.Scrollbar(main, orient=tkinter.VERTICAL, command=canvas.yview)
         frame_hidden_tasks = tkinter.Frame(canvas)
 
+        today = parse_date(format_date(datetime.datetime.now()))
+        assert today is not None
         for idx, task in self._get_tasks_in_step(KEY_HIDDEN).items():
+            background, border, foreground = encode_color(task=task, today=today)
+            border_frame = tkinter.Frame(frame_hidden_tasks, background=border)
             tkinter.Button(
-                frame_hidden_tasks,
+                border_frame,
                 text=(task["title"] + "\n" + task["deadline"]),
                 height=self._height,
                 width=self._width,
+                background=background,
+                foreground=foreground,
                 command=lambda i=idx: [main.destroy(), self.edit_task(i)],
-            ).pack(side=tkinter.TOP, expand=tkinter.YES, fill=tkinter.X)
+            ).pack(padx=5, pady=5)
+            border_frame.pack(side=tkinter.TOP, expand=tkinter.YES, fill=tkinter.X)
 
         scrollbar.pack(side=tkinter.RIGHT, fill=tkinter.BOTH)
         canvas.create_window(0, 0, anchor=tkinter.N, window=frame_hidden_tasks)
@@ -580,7 +592,7 @@ class Project:
             )
             row = 1
             for idx, task in self._get_tasks_in_step(step).items():
-                background, border = encode_color(task=task, today=today)
+                background, border, foreground = encode_color(task=task, today=today)
                 border_frame = tkinter.Frame(frame_cols, background=border)
                 tkinter.Button(
                     border_frame,
@@ -588,6 +600,7 @@ class Project:
                     height=self._height,
                     width=self._width,
                     background=background,
+                    foreground=foreground,
                     command=lambda i=idx: self.edit_task(i),
                 ).pack(padx=5, pady=5)
                 border_frame.grid(row=row, column=col)

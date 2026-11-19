@@ -19,20 +19,20 @@ MiKan is built with Python and Tkinter. It keeps projects on your computer as ed
 
 ### Priority and deadline colors
 
-The task button shows the priority with its background color. The border shows deadline urgency, using working days and a Monday-Friday calendar.
+The task button shows priority through a calm, high-contrast background; its text is dark or light depending on contrast. The independent border shows deadline urgency using a Monday-Friday working-day calendar.
 
 | Priority | Background |
 | --- | --- |
-| Critical | Red |
-| High | Orange |
-| Normal | Cream |
-| Low | Green |
+| Critical | Deep red with white text |
+| High | Soft red with dark red text |
+| Normal | Light blue-gray with dark text |
+| Low | Soft green with dark green text |
 
 | Deadline state | Border |
 | --- | --- |
-| Due in 1 working day or less / overdue | Red |
+| Due in 1 working day or less / overdue | Dark red |
 | Due in 2-3 working days | Orange |
-| More than 3 working days away | Priority color |
+| More than 3 working days away | Blue-gray |
 
 ## Screenshots
 
