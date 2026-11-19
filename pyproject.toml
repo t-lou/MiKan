@@ -22,8 +22,6 @@ indent-style = "space"
 line-ending = "lf"
 
 [tool.mypy]
-python_version = "3.12"
-files = ["components", "experiments", "tools"]
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
@@ -37,8 +35,6 @@ pretty = true
 ignore_missing_imports = true
 
 [tool.pyright]
-include = ["components", "experiments", "tools"]
-pythonVersion = "3.12"
 typeCheckingMode = "standard"
 reportMissingImports = false
 reportUnknownMemberType = false
