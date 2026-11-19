@@ -31,12 +31,28 @@ ROOT = tkinter.Tk()
 ROOT.title(NAME)
 
 
-def create_window(title: str) -> tkinter.Toplevel:
+def create_window(title: str, parent: tkinter.Misc | None = None) -> tkinter.Toplevel:
     """
     Create a child window of the single ROOT instead of a new Tk instance.
     """
-    win = tkinter.Toplevel(ROOT)
+    owner = ROOT if parent is None else parent
+    win = tkinter.Toplevel(owner)
+    win.transient(owner)
     win.title(title)
+
+    def position_after_layout() -> None:
+        if not win.winfo_exists():
+            return
+        if not isinstance(owner, (tkinter.Tk, tkinter.Toplevel)) or not owner.winfo_exists():
+            return
+        win.update_idletasks()
+        width = win.winfo_width()
+        height = win.winfo_height()
+        x = owner.winfo_rootx() + max(0, (owner.winfo_width() - width) // 2)
+        y = owner.winfo_rooty() + max(0, (owner.winfo_height() - height) // 2)
+        win.geometry(f"+{x}+{y}")
+
+    win.after_idle(position_after_layout)
     return win
 
 
@@ -240,7 +256,7 @@ class Project:
 
         task = None if idx < 0 else self._data["tasks"][idx]
 
-        dialog = create_window(NAME + " " + self._name + " new")
+        dialog = create_window(NAME + " " + self._name + " new", parent=self._window_main)
         dialog.protocol("WM_DELETE_WINDOW", lambda: [dialog.destroy(), self.display()])
 
         text_title = tkinter.Text(dialog, height=self._height, width=self._width)
@@ -285,12 +301,15 @@ class Project:
         """
         Delete the current project. Backup will remain.
         """
-        main = create_window(NAME + " " + self._name)
+        main = create_window(NAME + " " + self._name, parent=self._window_main)
 
         def delete_project() -> None:
             if tkinter.messagebox.askyesno(NAME, f"Delete project '{self._name}'?"):
                 os.remove(self._path)
                 main.destroy()
+                if self._window_main is not None:
+                    self._window_main.destroy()
+                    self._window_main = None
                 list_projects()
 
         tkinter.Button(
@@ -305,7 +324,7 @@ class Project:
         """
         Show the tasks in hidden status.
         """
-        main = create_window(NAME + " " + self._name + " hidden")
+        main = create_window(NAME + " " + self._name + " hidden", parent=self._window_main)
         main.protocol("WM_DELETE_WINDOW", lambda: [main.destroy(), self.display()])
 
         canvas = tkinter.Canvas(main, height=600)
@@ -346,7 +365,10 @@ class Project:
             finally:
                 main.destroy()
 
-        main = create_window(NAME + " " + self._name + (" current" if disp_updated else " saved"))
+        main = create_window(
+            NAME + " " + self._name + (" current" if disp_updated else " saved"),
+            parent=self._window_main,
+        )
         main.protocol("WM_DELETE_WINDOW", on_close)
 
         text_field = tkinter.Text(main, height=20, width=120)
@@ -365,7 +387,7 @@ class Project:
         with open(self._path, encoding="utf-8") as fs:
             data_saved = fs.read()
         if data_curr != data_saved:
-            warning = create_window("warning")
+            warning = create_window("warning", parent=self._window_main)
             tkinter.Button(
                 warning,
                 text="save",
@@ -387,14 +409,14 @@ class Project:
         Make the canvas scrollable with mouse wheel.
         """
         # for Windows
-        window.bind_all(
+        window.bind(
             "<MouseWheel>",
             lambda event: canvas.yview_scroll(1 if event.delta < 0 else -1, "units"),
         )
         # for Linux up-scrolling
-        window.bind_all("<Button-4>", lambda _: canvas.yview_scroll(-1, "units"))
+        window.bind("<Button-4>", lambda _: canvas.yview_scroll(-1, "units"))
         # for Linux down-scrolling
-        window.bind_all("<Button-5>", lambda _: canvas.yview_scroll(1, "units"))
+        window.bind("<Button-5>", lambda _: canvas.yview_scroll(1, "units"))
 
     def display(self) -> None:
         """
@@ -406,9 +428,16 @@ class Project:
                 self._window_main.destroy()
                 self._window_main = None
 
-        reset()
+        if self._window_main is not None and self._window_main.winfo_exists():
+            geometry = self._window_main.geometry()
+            for child in self._window_main.winfo_children():
+                child.destroy()
+            self._window_main.title(NAME + " " + self._name)
+            if geometry:
+                self._window_main.geometry(geometry)
+        else:
+            self._window_main = create_window(NAME + " " + self._name)
 
-        self._window_main = create_window(NAME + " " + self._name)
         self._window_main.protocol("WM_DELETE_WINDOW", lambda: [self.check_on_close(), reset()])
 
         steps = self._get_steps()
@@ -420,11 +449,11 @@ class Project:
         frame_util = tkinter.Frame(self._window_main)
 
         utils = {
-            "new": lambda: [reset(), self.edit_task()],
+            "new": self.edit_task,
             "save": self.save,
             "backup": self.backup,
-            "delete": lambda: [reset(), self.delete()],
-            "hidden": lambda: [reset(), self.disp_hidden()],
+            "delete": self.delete,
+            "hidden": self.disp_hidden,
             "raw": lambda disp=False: self.disp_text(disp_updated=disp),
             "tmp": lambda disp=True: self.disp_text(disp_updated=disp),
         }
@@ -455,7 +484,7 @@ class Project:
                     height=self._height,
                     width=self._width,
                     background=background,
-                    command=lambda i=idx: [reset(), self.edit_task(i)],
+                    command=lambda i=idx: self.edit_task(i),
                 ).pack(padx=5, pady=5)
                 border_frame.grid(row=row, column=col)
                 row += 1
