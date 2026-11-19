@@ -6,6 +6,8 @@ import os
 import tkinter
 import tkinter.messagebox
 import tkinter.ttk
+from collections.abc import Callable
+from typing import Any, TypedDict, cast
 
 # Name of the program.
 NAME = "MiKan"
@@ -18,9 +20,9 @@ PATH_PROJ = os.path.join(PATH_ROOT, ".proj")
 # Key for the tasks not to show.
 KEY_HIDDEN = "hidden"
 # Allowed levels for tasks.
-LEVELS = ["critical", "high", "normal", "low"]
+LEVELS: list[str] = ["critical", "high", "normal", "low"]
 # Whether a weekday is working day [?, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday]
-WORKING_DAYS = (None, True, True, True, True, True, False, False)
+WORKING_DAYS: tuple[bool | None, ...] = (None, True, True, True, True, True, False, False)
 # Default height for components.
 BUTTON_HEIGHT = 3
 # Default width for components.
@@ -31,9 +33,34 @@ ROOT = tkinter.Tk()
 ROOT.title(NAME)
 
 
+class Task(TypedDict):
+    """Fields stored for one task."""
+
+    step: str
+    title: str
+    text: str
+    level: str
+    deadline: str
+
+
+class ProjectData(TypedDict):
+    """Fields stored for one project."""
+
+    name: str
+    steps: list[str]
+    tasks: dict[int, Task]
+
+
 def create_window(title: str, parent: tkinter.Misc | None = None) -> tkinter.Toplevel:
     """
-    Create a child window of the single ROOT instead of a new Tk instance.
+    Create a child window and position it relative to its owner.
+
+    Args:
+        title: Window title.
+        parent: Optional owning window; defaults to the application root.
+
+    Returns:
+        The created top-level window.
     """
     owner = ROOT if parent is None else parent
     win = tkinter.Toplevel(owner)
@@ -41,6 +68,7 @@ def create_window(title: str, parent: tkinter.Misc | None = None) -> tkinter.Top
     win.title(title)
 
     def position_after_layout() -> None:
+        """Center the window over its owner after its requested size is known."""
         if not win.winfo_exists():
             return
         if not isinstance(owner, (tkinter.Tk, tkinter.Toplevel)) or not owner.winfo_exists():
@@ -58,7 +86,13 @@ def create_window(title: str, parent: tkinter.Misc | None = None) -> tkinter.Top
 
 def parse_date(string: str) -> datetime.datetime | None:
     """
-    Parse one date written as "YYYY-MM-DD".
+    Parse a date in the strict ``YYYY-MM-DD`` format.
+
+    Args:
+        string: Date text to parse.
+
+    Returns:
+        The parsed date, or ``None`` if the text is invalid or noncanonical.
     """
     try:
         date = datetime.datetime.strptime(string, "%Y-%m-%d")
@@ -69,15 +103,27 @@ def parse_date(string: str) -> datetime.datetime | None:
 
 def format_date(date: datetime.datetime) -> str:
     """
-    Format one date as "YYYY-MM-DD".
+    Format a date as ``YYYY-MM-DD``.
+
+    Args:
+        date: Date value to format.
+
+    Returns:
+        The formatted date string.
     """
     return date.strftime("%Y-%m-%d")
 
 
 def distance_date(start: datetime.datetime, end: datetime.datetime) -> int:
     """
-    Count the number of working days between two dates (start -> end).
-    Returns -1 if start is after end.
+    Count working days from ``start`` up to, but not including, ``end``.
+
+    Args:
+        start: Start of the date interval.
+        end: End of the date interval.
+
+    Returns:
+        The number of working days, or ``-1`` if ``start`` is after ``end``.
     """
     start_date = datetime.date(year=start.year, month=start.month, day=start.day)
     end_date = datetime.date(year=end.year, month=end.month, day=end.day)
@@ -94,11 +140,16 @@ def distance_date(start: datetime.datetime, end: datetime.datetime) -> int:
     return working
 
 
-def encode_color(task: dict, today: datetime.datetime) -> tuple[str, str]:
+def encode_color(task: Task, today: datetime.datetime) -> tuple[str, str]:
     """
-    Decide the color of one task.
-    background: importance
-    border: urgency
+    Choose task background and deadline urgency colors.
+
+    Args:
+        task: Task whose importance and deadline determine the colors.
+        today: Date used to calculate deadline urgency.
+
+    Returns:
+        A pair containing the background color and border color.
     """
     rule = {
         "critical": "#B22222",
@@ -123,7 +174,13 @@ def encode_color(task: dict, today: datetime.datetime) -> tuple[str, str]:
 
 def list_date(size: int = 30) -> list[str]:
     """
-    List the following working dates (today + forward).
+    List upcoming working dates, starting today.
+
+    Args:
+        size: Maximum number of dates to return.
+
+    Returns:
+        Working dates formatted as ``YYYY-MM-DD``.
     """
     result: list[str] = []
     date = datetime.datetime.now()
@@ -137,7 +194,16 @@ def list_date(size: int = 30) -> list[str]:
 
 def validate_task(title: str, description: str, deadline: str, level: str) -> str | None:
     """
-    Validate task fields and return an error message when invalid.
+    Validate task fields.
+
+    Args:
+        title: Task title.
+        description: Task description.
+        deadline: Deadline in ``YYYY-MM-DD`` format.
+        level: Task importance level.
+
+    Returns:
+        An error message if any field is invalid, otherwise ``None``.
     """
     if not title:
         return "A task title is required."
@@ -155,8 +221,17 @@ def pack_dialog_button(
     height: int,
     width: int,
     text: str,
-    callback,
+    callback: Callable[[], object],
 ) -> None:
+    """Create and pack a standard dialog button.
+
+    Args:
+        dialog: Window that will contain the button.
+        height: Button height in text units.
+        width: Button width in text units.
+        text: Button label.
+        callback: Function called when the button is activated.
+    """
     tkinter.Button(
         dialog,
         text=text,
@@ -168,37 +243,57 @@ def pack_dialog_button(
 
 class Project:
     """
-    The management of tasks with GUI.
+    Manage a project's tasks and Tkinter interface.
     """
 
     def __init__(self, name: str) -> None:
-        """
-        Start the project with given name. The content must be already initialized.
+        """Load and validate a project.
+
+        Args:
+            name: Project name, excluding the project-file extension.
         """
         self._name = name
         self._path = os.path.join(PATH_PROJ, name + EXT)
         with open(self._path, encoding="utf-8") as fs:
-            self._data = json.load(fs)
-        self._data["tasks"] = {int(k): v for k, v in self._data["tasks"].items()}
-        self._check(self._data)
+            data: dict[str, Any] = json.load(fs)
+        data["tasks"] = {int(key): task for key, task in data["tasks"].items()}
+        self._check(data)
+        self._data: ProjectData = cast(ProjectData, data)
         self._height = BUTTON_HEIGHT
         self._width = BUTTON_WIDTH
         self._window_main: tkinter.Toplevel | None = None
 
     def _get_steps(self) -> list[str]:
-        """
-        Get the defined steps in project.
-        """
+        """Return the project's workflow steps."""
         return list(self._data["steps"])
 
-    def _get_tasks_in_step(self, step: str) -> dict[int, dict]:
-        """
-        Get the tasks which are in the given step.
+    def _get_tasks_in_step(self, step: str) -> dict[int, Task]:
+        """Return tasks assigned to a workflow step.
+
+        Args:
+            step: Workflow step to filter by.
+
+        Returns:
+            Tasks in the requested step, keyed by task ID.
         """
         return {idx: task for idx, task in self._data["tasks"].items() if task["step"] == step}
 
-    def pack_task_buttons(self, dialog: tkinter.Toplevel, idx: int, task: dict | None, edit) -> None:
-        if idx < 0:
+    def pack_task_buttons(
+        self,
+        dialog: tkinter.Toplevel,
+        idx: int,
+        task: Task | None,
+        edit: Callable[[int, int], None],
+    ) -> None:
+        """Add the appropriate task edit and workflow buttons.
+
+        Args:
+            dialog: Task editor window.
+            idx: Task ID, or a negative value for a new task.
+            task: Existing task, or ``None`` when creating one.
+            edit: Callback that saves the task at a workflow-step index.
+        """
+        if task is None:
             pack_dialog_button(dialog, self._height, self._width, "add", lambda i=0: edit(idx, i))
             return
 
@@ -227,12 +322,14 @@ class Project:
             )
 
     def edit_task(self, idx: int = -1) -> None:
-        """
-        Start a dialog for editing the task.
-        idx < 0 means create a new task.
+        """Open a dialog to create or edit a task.
+
+        Args:
+            idx: Task ID to edit, or a negative value to create a task.
         """
 
         def edit(idx_inner: int, i_step: int) -> None:
+            """Validate and save the task at the selected workflow step."""
             title = text_title.get("1.0", tkinter.END).strip()
             description = text_description.get("1.0", tkinter.END).strip()
             deadline = comb_deadline.get()
@@ -244,13 +341,14 @@ class Project:
             if idx_inner < 0:
                 idx_inner = (max(self._data["tasks"].keys()) + 1) if bool(self._data["tasks"]) else 0
             step_to_be = (self._get_steps() + [KEY_HIDDEN])[i_step]
-            self._data["tasks"][idx_inner] = {
+            task_data: Task = {
                 "step": step_to_be,
                 "title": title,
                 "text": description,
                 "level": level,
                 "deadline": deadline,
             }
+            self._data["tasks"][idx_inner] = task_data
             dialog.destroy()
             self.display()
 
@@ -284,26 +382,25 @@ class Project:
         self.pack_task_buttons(dialog, idx, task, edit)
 
     def save(self, path: str | None = None) -> None:
-        """
-        Save the project conditions.
+        """Save project data to disk.
+
+        Args:
+            path: Optional alternate destination path.
         """
         with open(self._path if path is None else path, "w", encoding="utf-8") as fs:
             json.dump(self._data, fs, indent=1)
 
     def backup(self) -> None:
-        """
-        Back up the project condition with name and time.
-        """
+        """Write a timestamped backup of the project."""
         backup_path = self._path + "." + datetime.datetime.now().strftime("%Y%m%d%H%M%S") + ".back"
         self.save(backup_path)
 
     def delete(self) -> None:
-        """
-        Delete the current project. Backup will remain.
-        """
+        """Prompt to delete the project while retaining its backups."""
         main = create_window(NAME + " " + self._name, parent=self._window_main)
 
         def delete_project() -> None:
+            """Delete the project after user confirmation."""
             if tkinter.messagebox.askyesno(NAME, f"Delete project '{self._name}'?"):
                 os.remove(self._path)
                 main.destroy()
@@ -321,9 +418,7 @@ class Project:
         ).pack(side=tkinter.LEFT)
 
     def disp_hidden(self) -> None:
-        """
-        Show the tasks in hidden status.
-        """
+        """Show tasks assigned to the hidden workflow step."""
         main = create_window(NAME + " " + self._name + " hidden", parent=self._window_main)
         main.protocol("WM_DELETE_WINDOW", lambda: [main.destroy(), self.display()])
 
@@ -348,17 +443,19 @@ class Project:
         canvas.pack(side=tkinter.TOP, expand=tkinter.YES, fill=tkinter.BOTH)
 
     def disp_text(self, disp_updated: bool = True) -> None:
-        """
-        Show the json file with project content, and save by closing (when the text is valid).
-        disp_updated: whether to display and save the updated (or last saved) content.
+        """Display project JSON and apply valid edits when the window closes.
+
+        Args:
+            disp_updated: Whether to show in-memory data instead of saved data.
         """
 
         def on_close() -> None:
+            """Validate and apply edited project JSON before closing."""
             try:
-                data = json.loads(text_field.get("1.0", tkinter.END).strip())
+                data: dict[str, Any] = json.loads(text_field.get("1.0", tkinter.END).strip())
                 self._check(data)
                 data["tasks"] = {int(k): v for k, v in data["tasks"].items()}
-                self._data = data
+                self._data = cast(ProjectData, data)
                 self.display()
             except (json.JSONDecodeError, AssertionError, KeyError, ValueError, TypeError) as error:
                 tkinter.messagebox.showerror(NAME, f"Invalid project data:\n{error}")
@@ -380,9 +477,7 @@ class Project:
         text_field.pack(side=tkinter.TOP, expand=tkinter.YES, fill=tkinter.BOTH)
 
     def check_on_close(self) -> None:
-        """
-        Check whether there is unsaved update; if so, pop up a dialog to save or discard.
-        """
+        """Prompt to save or discard changes when the project has unsaved data."""
         data_curr = json.dumps(self._data, indent=1)
         with open(self._path, encoding="utf-8") as fs:
             data_saved = fs.read()
@@ -405,25 +500,34 @@ class Project:
 
     @staticmethod
     def bind_canvas(window: tkinter.Toplevel, canvas: tkinter.Canvas) -> None:
+        """Bind platform-specific mouse-wheel events to a canvas.
+
+        Args:
+            window: Window that receives the wheel events.
+            canvas: Canvas to scroll.
         """
-        Make the canvas scrollable with mouse wheel.
-        """
-        # for Windows
-        window.bind(
-            "<MouseWheel>",
-            lambda event: canvas.yview_scroll(1 if event.delta < 0 else -1, "units"),
-        )
-        # for Linux up-scrolling
-        window.bind("<Button-4>", lambda _: canvas.yview_scroll(-1, "units"))
-        # for Linux down-scrolling
-        window.bind("<Button-5>", lambda _: canvas.yview_scroll(1, "units"))
+
+        def on_mousewheel(event: tkinter.Event) -> None:
+            """Scroll according to the Windows/macOS mouse-wheel delta."""
+            canvas.yview_scroll(1 if event.delta < 0 else -1, "units")
+
+        def on_scroll_up(_event: tkinter.Event) -> None:
+            """Scroll up for Linux wheel events."""
+            canvas.yview_scroll(-1, "units")
+
+        def on_scroll_down(_event: tkinter.Event) -> None:
+            """Scroll down for Linux wheel events."""
+            canvas.yview_scroll(1, "units")
+
+        window.bind("<MouseWheel>", on_mousewheel)
+        window.bind("<Button-4>", on_scroll_up)
+        window.bind("<Button-5>", on_scroll_down)
 
     def display(self) -> None:
-        """
-        Show the kanban.
-        """
+        """Display or refresh the project board in its existing window."""
 
         def reset() -> None:
+            """Destroy the project's main window and clear its reference."""
             if self._window_main is not None:
                 self._window_main.destroy()
                 self._window_main = None
@@ -496,9 +600,14 @@ class Project:
         canvas.pack(side=tkinter.TOP, expand=tkinter.YES, fill=tkinter.BOTH)
         frame_util.pack(side=tkinter.BOTTOM, fill=tkinter.X)
 
-    def _check(self, data: dict) -> None:
-        """
-        Check whether the project content is valid.
+    def _check(self, data: dict[str, Any]) -> None:
+        """Validate project data loaded from JSON.
+
+        Args:
+            data: Project data to validate.
+
+        Raises:
+            AssertionError: If any required project or task field is invalid.
         """
         # general
         assert "name" in data and isinstance(data["name"], str) and bool(data["name"]), "name in project not valid"
@@ -526,11 +635,10 @@ class Project:
 
 
 def init_project() -> None:
-    """
-    Initialize one project. It will pop out a dialog for defined steps.
-    """
+    """Open the dialog for creating a project and defining its workflow."""
 
     def create() -> None:
+        """Validate the form and create its project file."""
         name = text_name.get("1.0", tkinter.END).strip()
         if not name or "/" in name or "\\" in name:
             tkinter.messagebox.showerror(NAME, "Project name must be non-empty and cannot contain path separators.")
@@ -579,9 +687,7 @@ def init_project() -> None:
 
 
 def list_projects() -> None:
-    """
-    List the available projects and one button for creating new project.
-    """
+    """Show available projects and the project-creation button."""
     height = BUTTON_HEIGHT
     width = BUTTON_WIDTH * 2
 
