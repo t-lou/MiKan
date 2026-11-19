@@ -100,10 +100,7 @@ def encode_color(task: dict, today: datetime.datetime) -> tuple[str, str]:
     background = rule[task["level"]]
 
     deadline_dt = parse_date(task["deadline"])
-    if deadline_dt is None:
-        interval = 9999
-    else:
-        interval = distance_date(today, deadline_dt)
+    interval = 9999 if deadline_dt is None else distance_date(today, deadline_dt)
 
     if interval <= 1:
         border = "#B22222"
