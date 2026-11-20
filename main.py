@@ -304,17 +304,17 @@ class Project:
 
         steps = self._get_steps()
         if task["step"] == KEY_HIDDEN:
-            pack_dialog_button(dialog, self._height, self._width, f"back to {steps[0]}", lambda i=0: edit(idx, i))
+            pack_dialog_button(dialog, self._height, self._width, f"← back to {steps[0]}", lambda i=0: edit(idx, i))
             return
 
         i_step = steps.index(task["step"])
-        pack_dialog_button(dialog, self._height, self._width, "||| update |||", lambda i=i_step: edit(idx, i))
+        pack_dialog_button(dialog, self._height, self._width, "↻ update", lambda i=i_step: edit(idx, i))
         if i_step > 0:
             pack_dialog_button(
                 dialog,
                 self._height,
                 self._width,
-                f"<<< {steps[i_step - 1]} <<<",
+                f"← {steps[i_step - 1]}",
                 lambda i=i_step - 1: edit(idx, i),
             )
         if i_step + 1 <= len(steps):
@@ -322,7 +322,7 @@ class Project:
                 dialog,
                 self._height,
                 self._width,
-                f">>> {(steps + [KEY_HIDDEN])[i_step + 1]} >>>",
+                f"{(steps + [KEY_HIDDEN])[i_step + 1]} →",
                 lambda i=i_step + 1: edit(idx, i),
             )
 
